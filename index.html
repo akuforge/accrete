@@ -541,7 +541,7 @@ function eventStep(dt){const VR=viewR();
  if(evWarn){evWarn.t+=dt;const so=evWarn.obj;if(so){if(so.dead||so.eat>=0){evWarn=null;}else{evWarn.x=so.x;evWarn.y=so.y;}}}
  if(evWarn&&evWarn.t>=evWarn.m){{const so=evWarn.obj;if(so){so.dead=1;spray(so.x,so.y,rand()*TAU,so.r*so.r*.5,so,so.vx,so.vy);spray(so.x,so.y,rand()*TAU,so.r*so.r*.3,so,so.vx,so.vy);burst(so.x,so.y,so.k,30,null,2);}shocks.push({x:evWarn.x,y:evWarn.y,r:so?so.r:VR*.3,max:VR*(evWarn.far?3.2:2.2),spd:VR*1.1,str:10,chip:1,col:[220,235,255]});flash=Math.max(flash,evWarn.far?.18:.35);shake=Math.max(shake,.8);tone(50,1.5,'sine',.5,28);tone(160,.9,'sawtooth',.1,40);evWarn=null;}}
  run.evT-=dt;if(run.evT>0||run.boss||evWarn||run.shower)return;run.evT=rr(45,80);
- const opts=[['shower',.4],['nova',.35]];if(P.stage>=1)opts.push(['hole',.25]);let x=rand()*opts.reduce((a,o)=>a+o[1],0),type='shower';for(const o of opts){x-=o[1];if(x<=0){type=o[0];break;}}
+ const opts=[['shower',.4]];if(P.stage>=10)opts.push(['nova',.35]);if(P.stage>=1)opts.push(['hole',.25]);let x=rand()*opts.reduce((a,o)=>a+o[1],0),type='shower';for(const o of opts){x-=o[1];if(x<=0){type=o[0];break;}}
  if(type==='shower'){run.shower={a:rand()*TAU,t:0,n:0};toast('☄️ Meteor shower!');}
  if(type==='nova'){const stars=objs.filter(o=>!o.dead&&o.eat<0&&!o.lm&&!o.boss&&(o.k==='star'||o.k==='blue')&&Math.hypot(o.x-P.x,o.y-P.y)<VR*.9&&Math.hypot(o.x-P.x,o.y-P.y)>o.r+P.r*4);
   if(stars.length){const o=pick(rand,stars);evWarn={obj:o,x:o.x,y:o.y,t:0,m:2.4};toast('💥 A star is about to blow!');}
