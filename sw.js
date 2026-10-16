@@ -1,6 +1,6 @@
 // Network first (so updates show up at once), cache fallback (so it plays offline / off the tailnet).
 // Only the clean file URLs are cached; version-check requests (?vc=...) always go to the network.
-const C='accrete-v6',FILES=['./','./index.html','./manifest.json','./icon-180.png','./icon-192.png','./icon-512.png'];
+const C='accrete-v7',FILES=['./','./index.html','./manifest.json','./icon-180.png','./icon-192.png','./icon-512.png','./fonts/cormorant.woff2','./fonts/cormorant-italic.woff2'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(C).then(c=>c.addAll(FILES)).then(()=>self.skipWaiting()));});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));});
 self.addEventListener('fetch',e=>{const req=e.request;if(req.method!=='GET')return;const url=new URL(req.url);if(url.search)return;
