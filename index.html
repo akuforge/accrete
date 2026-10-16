@@ -25,7 +25,7 @@ button{font:inherit;color:inherit}
 button:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
 /* ---- HUD: an instrument, not a dashboard */
 #hud{position:fixed;left:0;right:0;top:0;pointer-events:none;padding:calc(env(safe-area-inset-top) + 14px) calc(env(safe-area-inset-right) + 18px) 0 calc(env(safe-area-inset-left) + 18px)}
-#hud .scrim{position:absolute;left:0;right:0;top:0;height:calc(env(safe-area-inset-top) + 150px);background:linear-gradient(180deg,rgba(5,6,14,.82),rgba(5,6,14,.42) 58%,rgba(5,6,14,0));z-index:-1}
+#hud{text-shadow:0 1px 0 rgba(0,0,0,.75),0 0 1px rgba(0,0,0,.6)}
 .hrow{display:flex;align-items:flex-start;gap:16px}
 .inst{flex:1;max-width:380px;min-width:0}
 .srow{display:flex;align-items:baseline;gap:10px;white-space:nowrap}
@@ -135,7 +135,6 @@ h2{font:600 clamp(40px,12vw,60px)/1 var(--serif);margin:6px 0 20px}
 <div id="vprobe" style="position:fixed;left:0;top:0;width:1px;height:100vh;height:100lvh;visibility:hidden;pointer-events:none"></div>
 <canvas id="c"></canvas>
 <div id="hud" class="hidden">
-  <div class="scrim"></div>
   <div class="hrow">
     <div class="inst">
       <div class="srow"><span id="sname">Pebble</span><span id="cyc"></span></div>
@@ -155,7 +154,7 @@ h2{font:600 clamp(40px,12vw,60px)/1 var(--serif);margin:6px 0 20px}
 const $=id=>document.getElementById(id);
 const cv=$('c'),ov=$('ov');let g=cv.getContext('2d');
 const Q=new URLSearchParams(location.search);
-const BUILD='2026-10-16.11';
+const BUILD='2026-10-16.12';
 let W=0,H=0,DPR=1;
 function resize(){DPR=Math.min(window.devicePixelRatio||1,3);let w=window.innerWidth,h=window.innerHeight;
  // iOS home-screen apps can report a viewport shorter than the screen (a black strip at the bottom): take the largest honest height
@@ -816,7 +815,7 @@ function drawBG(t){const sf=Math.max(0,stageF(P.r)),s0=Math.min(LAST,Math.floor(
  if(shoot){shoot.t+=dt;shoot.x+=shoot.vx*dt;shoot.y+=shoot.vy*dt;const a=Math.max(0,1-shoot.t/.8),gr=g.createLinearGradient(shoot.x,shoot.y,shoot.x-shoot.vx*.12,shoot.y-shoot.vy*.12);gr.addColorStop(0,'rgba(255,255,255,'+.8*a+')');gr.addColorStop(1,'rgba(255,255,255,0)');g.strokeStyle=gr;g.lineWidth=1.5;g.beginPath();g.moveTo(shoot.x,shoot.y);g.lineTo(shoot.x-shoot.vx*.12,shoot.y-shoot.vy*.12);g.stroke();if(a<=0)shoot=null;}}
 function drawFront(t){const sf=Math.max(0,stageF(P.r)),c=lerpC(STAGES[Math.min(LAST,Math.floor(sf))].c1,[255,255,255],.6);g.fillStyle=rgba(c,1);
  for(const m of MOTES){const x=((m.x*W+SOFF[3][0])%W+W)%W,y=((m.y*H+SOFF[3][1])%H+H)%H;g.globalAlpha=m.b;g.beginPath();g.arc(x,y,m.s,0,TAU);g.fill();}g.globalAlpha=1;
- if(!vig||vig.width!==Math.round(W)||vig.height!==Math.round(H)){vig=document.createElement('canvas');vig.width=Math.max(1,Math.round(W));vig.height=Math.max(1,Math.round(H));const x=vig.getContext('2d'),gr=x.createRadialGradient(W/2,H/2,Math.min(W,H)*.35,W/2,H/2,Math.hypot(W,H)*.62);gr.addColorStop(0,'rgba(0,0,0,0)');gr.addColorStop(1,'rgba(0,0,0,.55)');x.fillStyle=gr;x.fillRect(0,0,W,H);}
+ if(!vig||vig.width!==Math.round(W)||vig.height!==Math.round(H)){vig=document.createElement('canvas');vig.width=Math.max(1,Math.round(W));vig.height=Math.max(1,Math.round(H));const x=vig.getContext('2d'),gr=x.createRadialGradient(W/2,H/2,Math.min(W,H)*.55,W/2,H/2,Math.hypot(W,H)*.62);gr.addColorStop(0,'rgba(0,0,0,0)');gr.addColorStop(1,'rgba(0,0,0,.22)');x.fillStyle=gr;x.fillRect(0,0,W,H);}
  g.drawImage(vig,0,0,W,H);}
 
 // ---------- render
