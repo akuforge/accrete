@@ -98,7 +98,7 @@ h2{font-size:clamp(30px,9vw,48px);margin:4px 0 14px;font-weight:800;letter-spaci
 const $=id=>document.getElementById(id);
 const cv=$('c'),ov=$('ov');let g=cv.getContext('2d');
 const Q=new URLSearchParams(location.search);
-const BUILD='2026-10-16.8';
+const BUILD='2026-10-16.9';
 let W=0,H=0,DPR=1;
 function resize(){DPR=Math.min(window.devicePixelRatio||1,3);let w=window.innerWidth,h=window.innerHeight;
  // iOS home-screen apps can report a viewport shorter than the screen (a black strip at the bottom): take the largest honest height
@@ -818,13 +818,13 @@ function attract(){run=freshRun();P=newPlayer(R0*Math.pow(STEP,rand()*3));P.inv=
 function showTitle(){state='title';touch.on=false;$('hud').classList.add('hidden');attract();const sv=loadSave();
  showOv('<h1>ACCRETE</h1><p class="tag">from a pebble to a universe</p>'+
   (sv?'<button class="btn pri" id="bCont">Continue · '+STAGES[sv.stage].n+(sv.run.cycle>1?' · cycle '+sv.run.cycle:'')+'</button>':'')+
-  '<button class="btn'+(sv?'':' pri')+'" id="bNew">'+(sv?'New run':'Play')+'</button><button class="btn" id="bDay">🗓 Daily universe'+(rec.daily&&rec.daily.d===dateKey()?' · best '+rec.daily.n:'')+'</button><button class="btn" id="bAlb">📖 Album · '+CODEX.filter(e=>rec.codex[e.key]).length+'/'+CODEX.length+'</button><button class="btn" id="bShop">🔭 Observatory · ✨'+rec.dust.toLocaleString()+'</button>'+
+  '<button class="btn'+(sv?'':' pri')+'" id="bNew">'+(sv?'New run':'Play')+'</button><button class="btn" id="bAlb">📖 Album · '+CODEX.filter(e=>rec.codex[e.key]).length+'/'+CODEX.length+'</button><button class="btn" id="bShop">🔭 Observatory · ✨'+rec.dust.toLocaleString()+'</button>'+
     (rec.runs?'<div class="rec">Best: '+rec.bestName+(rec.bestCycle>1?' (cycle '+rec.bestCycle+')':'')+' · '+rec.runs+' runs · '+rec.eaten.toLocaleString()+' bodies swallowed'+(rec.bangs?' · '+rec.bangs+' Big Bangs':'')+'</div>':'')+
   sndBtns(),true);
  on('bCont',()=>startRun(sv));on('bNew',()=>startRun(null));on('bDay',()=>startRun(null,true));on('bAlb',()=>showAlbum(showTitle));on('bShop',showShop);bindSnd();}
 function dateKey(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
-function startRun(sv,daily){run=freshRun();let r=R0;
- if(sv){Object.assign(run,sv.run);run.gone=new Set(sv.run.gone||[]);run.laws=sv.run.laws||[];run.bossDone=run.bossDone||{};run.boss=null;run.cometT=rr(12,20);run.moonA=0;run.saveT=4;r=sv.r;}
+function startRun(sv,daily){daily=false;run=freshRun();let r=R0;
+ if(sv){Object.assign(run,sv.run);run.daily=null;run.gone=new Set(sv.run.gone||[]);run.laws=sv.run.laws||[];run.bossDone=run.bossDone||{};run.boss=null;run.cometT=rr(12,20);run.moonA=0;run.saveT=4;r=sv.r;}
  else if(Q.get('stage'))r=R0*Math.pow(STEP,+Q.get('stage')+.05);
  P=newPlayer(r);if(sv)P.stage=sv.stage;shocks=[];evWarn=null;
  if(!sv){run.daily=daily?dateKey():null;run.seed=daily?hashStr('accrete-'+run.daily):(rand()*4294967296)>>>0;}
