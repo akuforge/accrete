@@ -538,11 +538,15 @@ function bossStep(dt){const bd=BOSSES.find(b=>b.stage===P.stage);if(bd&&!run.bos
 // ---------- space events
 function eventStep(dt){const VR=viewR();
  if(run.shower){const sh=run.shower;sh.t+=dt;while(sh.n<sh.t*9&&sh.n<36){sh.n++;const a=sh.a+rr(-.35,.35),x=P.x+Math.cos(a)*VR*1.1,y=P.y+Math.sin(a)*VR*1.1,o=makeObj(x,y,P.r*rr(.08,.32)),tx=P.x+rr(-.5,.5)*VR-x,ty=P.y+rr(-.5,.5)*VR-y,tl=Math.hypot(tx,ty),sp=P.r*rr(5,7);o.vx=tx/tl*sp;o.vy=ty/tl*sp;o.met=1;o.sp=rr(-3,3);objs.push(o);}if(sh.n>=36)run.shower=null;}
- if(evWarn){evWarn.t+=dt;if(evWarn.t>=evWarn.m){shocks.push({x:evWarn.x,y:evWarn.y,r:0,max:VR*2.2,spd:VR*1.1,str:10,chip:1,col:[220,235,255]});flash=Math.max(flash,.35);shake=Math.max(shake,.8);tone(50,1.5,'sine',.5,28);tone(160,.9,'sawtooth',.1,40);evWarn=null;}}
+ if(evWarn){evWarn.t+=dt;const so=evWarn.obj;if(so){if(so.dead||so.eat>=0){evWarn=null;}else{evWarn.x=so.x;evWarn.y=so.y;}}}
+ if(evWarn&&evWarn.t>=evWarn.m){{const so=evWarn.obj;if(so){so.dead=1;spray(so.x,so.y,rand()*TAU,so.r*so.r*.5,so,so.vx,so.vy);spray(so.x,so.y,rand()*TAU,so.r*so.r*.3,so,so.vx,so.vy);burst(so.x,so.y,so.k,30,null,2);}shocks.push({x:evWarn.x,y:evWarn.y,r:so?so.r:VR*.3,max:VR*(evWarn.far?3.2:2.2),spd:VR*1.1,str:10,chip:1,col:[220,235,255]});flash=Math.max(flash,evWarn.far?.18:.35);shake=Math.max(shake,.8);tone(50,1.5,'sine',.5,28);tone(160,.9,'sawtooth',.1,40);evWarn=null;}}
  run.evT-=dt;if(run.evT>0||run.boss||evWarn||run.shower)return;run.evT=rr(45,80);
  const opts=[['shower',.4],['nova',.35]];if(P.stage>=1)opts.push(['hole',.25]);let x=rand()*opts.reduce((a,o)=>a+o[1],0),type='shower';for(const o of opts){x-=o[1];if(x<=0){type=o[0];break;}}
  if(type==='shower'){run.shower={a:rand()*TAU,t:0,n:0};toast('☄️ Meteor shower!');}
- if(type==='nova'){const a=rand()*TAU,d=VR*rr(.45,.7);evWarn={x:P.x+Math.cos(a)*d,y:P.y+Math.sin(a)*d,t:0,m:2.4};toast('💥 A star is about to blow!');tone(80,2.2,'sine',.15,320);}
+ if(type==='nova'){const stars=objs.filter(o=>!o.dead&&o.eat<0&&!o.lm&&!o.boss&&(o.k==='star'||o.k==='blue')&&Math.hypot(o.x-P.x,o.y-P.y)<VR*.9&&Math.hypot(o.x-P.x,o.y-P.y)>o.r+P.r*4);
+  if(stars.length){const o=pick(rand,stars);evWarn={obj:o,x:o.x,y:o.y,t:0,m:2.4};toast('💥 A star is about to blow!');}
+  else{const a=rand()*TAU;evWarn={far:1,x:P.x+Math.cos(a)*VR*1.6,y:P.y+Math.sin(a)*VR*1.6,t:0,m:2.4};toast('💥 A distant star is going supernova');}
+  tone(80,2.2,'sine',.15,320);}
  if(type==='hole'){const a=rand()*TAU,x=P.x+Math.cos(a)*VR*1.2,y=P.y+Math.sin(a)*VR*1.2,o=makeObj(x,y,P.r*rr(2.2,3.2));o.k='hole';o.v=0;o.bh=1;o.pullR=5;o.pullS=9;o.sp=0;const off=rr(-.35,.35)*VR,tx=P.x-Math.sin(a)*off-x,ty=P.y+Math.cos(a)*off-y,tl=Math.hypot(tx,ty),sp=P.r*rr(1.6,2.4);o.vx=tx/tl*sp;o.vy=ty/tl*sp;objs.push(o);toast('🕳️ A rogue black hole is drifting through');}}
 function stepShocks(dt){for(const s of shocks){const r0=s.r;if(s.ref&&!s.ref.dead){s.x=s.ref.x;s.y=s.ref.y;}s.r+=s.spd*dt;const f=Math.max(0,1-s.r/s.max);
   for(const o of objs){if(o.dead||o.eat>=0||o===s.ref||o.boss||o.bh||o.lm)continue;const dx=o.x-s.x,dy=o.y-s.y,d=Math.hypot(dx,dy);if(d<r0||d>=s.r||!d)continue;const imp=P.r*s.str*f;o.host=null;o.vx+=dx/d*imp;o.vy+=dy/d*imp;if(s.chip&&o.r>P.r*.35&&o.r<P.r*4&&rand()<.7)chip(o,o.x,o.y,Math.atan2(dy,dx),.3);}
@@ -638,7 +642,10 @@ function render(t){
   if(rs<1){g.fillStyle=rgba(KCOL[o.k],.85*(1-t2));g.fillRect(x-1,y-1,2,2);continue;}
   g.save();g.translate(x,y);g.rotate(Math.atan2(b.y-o.y,b.x-o.x));g.scale(1+1.4*t2,1-.5*t2);g.globalAlpha=1-t2*t2;drawBody(o.k,o.v,0,0,rs,0);g.restore();}
  for(const sh of shocks){const f=Math.max(0,1-sh.r/sh.max),x=sh.x*z+ox,y=sh.y*z+oy,R1=sh.r*z;g.strokeStyle=rgba(sh.col,.18*f);g.lineWidth=16;g.beginPath();g.arc(x,y,R1,0,TAU);g.stroke();g.strokeStyle=rgba(sh.col,.85*f);g.lineWidth=2.5;g.beginPath();g.arc(x,y,R1,0,TAU);g.stroke();}
- if(evWarn){const f=evWarn.t/evWarn.m,x=evWarn.x*z+ox,y=evWarn.y*z+oy,R1=P.r*z*(.4+f*1.4)*(1+.15*Math.sin(t*(10+f*30)));drawBody('blue',0,x,y,R1,0);g.fillStyle=radial(g,x,y,0,x,y,R1*3,[[0,'rgba(255,255,255,'+(.25+.5*f)+')'],[1,'rgba(200,220,255,0)']]);circle(g,x,y,R1*3);g.fill();}
+ if(evWarn){const f=evWarn.t/evWarn.m,pulse=1+.15*Math.sin(t*(10+f*30));let x=evWarn.x*z+ox,y=evWarn.y*z+oy,R1;
+  if(evWarn.far){const a=Math.atan2(y-H/2,x-W/2),ca=Math.cos(a),sa=Math.sin(a),tt=Math.min((W/2)/Math.max(1e-6,Math.abs(ca)),(H/2)/Math.max(1e-6,Math.abs(sa)));x=W/2+ca*tt;y=H/2+sa*tt;R1=Math.min(W,H)*(.15+.35*f)*pulse;}
+  else R1=evWarn.obj.r*z*(1.2+f*.8)*pulse;
+  g.fillStyle=radial(g,x,y,0,x,y,R1*2,[[0,'rgba(255,255,255,'+(.2+.55*f)+')'],[.4,'rgba(200,220,255,'+(.15+.3*f)+')'],[1,'rgba(200,220,255,0)']]);circle(g,x,y,R1*2);g.fill();}
  g.globalAlpha=1;for(const r of rings){const f=r.t/r.m,e=1-Math.pow(1-f,3),ref=r.ref,x=ref.x*z+ox,y=ref.y*z+oy,R1=ref.r*z*(r.r0+(r.r1-r.r0)*e);g.strokeStyle=rgba(r.col,(1-f)*.7);g.lineWidth=r.w*(1-f*.6);g.beginPath();g.arc(x,y,R1,0,TAU);g.stroke();}
  g.globalCompositeOperation='lighter';for(const p of parts){const a=1-p.l/p.m,s=Math.max(1,p.s*z);g.fillStyle=rgba(p.c,a*.9);g.fillRect(p.x*z+ox-s/2,p.y*z+oy-s/2,s,s);}g.globalCompositeOperation='source-over';
  g.restore();
@@ -744,7 +751,7 @@ function loop(now){let dt=(now-last)/1000;last=now;if(!(dt>0))dt=0;if(dt>.05)dt=
  else if(state==='dead'){deathT+=dt;stepShocks(dt);stepWorld(dt,false);stepParts(dt);if(deathT>1.3&&!overShown)showOver();}
  else if(state==='bang'){bangUpdate(dt);stepWorld(dt,false);camera(dt,run._reset&&bangT<.75);stepParts(dt);}
  if(banner&&state!=='pick'&&state!=='paused')banner.t+=dt;
- shake=Math.max(0,shake-dt*2.5);frameDt=dt;musicTick();
+ shake=Math.max(0,shake-dt*2.5);if(state!=='bang')flash=Math.max(0,flash-dt*1.2);frameDt=dt;musicTick();
  const t0=performance.now();render(simT);benchMs=benchMs*.95+(performance.now()-t0)*.05;if(Q.has('bench')&&frame%60===0)document.title='MS '+benchMs.toFixed(2)+' spx '+scPix+' n '+SC.size;requestAnimationFrame(loop);}
 
 // ---------- icon render mode (used once to make the home-screen icon)
