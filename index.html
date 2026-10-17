@@ -130,6 +130,10 @@ h2{font:600 clamp(40px,12vw,60px)/1 var(--serif);margin:6px 0 20px}
 .runlog div{display:flex;gap:12px;align-items:flex-start;color:var(--dust);font:400 13px/1.35 var(--sans)}
 .runlog svg{color:var(--gold);margin-top:2px}
 .runlog b{display:block;font:600 17px/1.1 var(--serif);color:var(--star);margin-bottom:2px}
+.ov.tray{justify-content:flex-end;background:linear-gradient(0deg,rgba(5,6,14,.92),rgba(5,6,14,.6) 45%,rgba(5,6,14,0) 80%);-webkit-backdrop-filter:none;backdrop-filter:none;padding-bottom:calc(env(safe-area-inset-bottom) + 18px)}
+.ov.tray .card{transform:translateY(40px);background:rgba(12,14,28,.96)}
+.ov.tray .card.l{background:linear-gradient(160deg,rgba(58,40,16,.97),rgba(12,14,28,.97) 55%)}
+.ov.tray .card.in{transform:none}
 @media (orientation:landscape) and (max-height:520px){.cards{flex-direction:row;width:min(880px,96vw)}.card{flex:1;flex-direction:column;text-align:center}.pips{justify-content:center}.tag{margin-bottom:14px}h1{font-size:64px}}
 @media (prefers-reduced-motion:reduce){.card,.rail .tk,#railseg,#toast{transition:none}}
 </style>
@@ -158,7 +162,7 @@ h2{font:600 clamp(40px,12vw,60px)/1 var(--serif);margin:6px 0 20px}
 const $=id=>document.getElementById(id);
 const cv=$('c'),ov=$('ov');let g=cv.getContext('2d');
 const Q=new URLSearchParams(location.search);
-const BUILD='2026-10-16.18';
+const BUILD='2026-10-16.19';
 let W=0,H=0,DPR=1;
 function resize(){DPR=Math.min(window.devicePixelRatio||1,3);let w=window.innerWidth,h=window.innerHeight;
  // iOS home-screen apps can report a viewport shorter than the screen (a black strip at the bottom): take the largest honest height
@@ -1035,7 +1039,7 @@ function hud(){if(frame%6)return;const bo=run.boss;$('bossbar').classList.toggle
  const bp=railPos(stg,stg)+clamp(stageF(P.r)-stg,0,1)*.42;$('railbead').style.left=(bp*100)+'%';$('railfill').style.width=(bp*100)+'%';
  const sig=JSON.stringify(run.perks)+run.shields+run.phoenixUsed+run.pacts.join()+run.relics.join()+run.syn.join();if(sig!==perkSig){perkSig=sig;let h='';for(const k in run.perks){if(k==='crust'||k==='stardust')continue;if(k==='phoenix'&&run.phoenixUsed)continue;h+='<span class="pk">'+svgI(k)+(run.perks[k]>1?run.perks[k]:'')+'</span>';}for(const k of run.relics)h+='<span class="pk rl">'+svgI(RELICS[k].ic)+'</span>';for(const k of run.pacts)h+='<span class="pk pc">'+svgI(PACTS[k].ic)+'</span>';if(run.shields)h+='<span class="pk sh">'+svgI('crust')+run.shields+'</span>';$('perks').innerHTML=h;}}
 let toastT=0;function toast(msg){const e=$('toast');e.textContent=String(msg).replace(/[\p{Extended_Pictographic}\u{FE0F}\u{200D}]/gu,'').trim();e.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>e.classList.remove('show'),1800);}
-function showOv(html,light){ov.innerHTML=html;ov.className='ov'+(light?' light':'');}
+function showOv(html,light,cls){ov.innerHTML=html;ov.className='ov'+(light?' light':'')+(cls?' '+cls:'');}
 function hideOv(){ov.className='ov hidden';ov.innerHTML='';}
 const on=(id,fn)=>{const e=$(id);if(e)e.addEventListener('click',ev=>{ev.stopPropagation();audio();fn();});};
 function sndLabel(){return'';}
@@ -1089,7 +1093,7 @@ function cardHTML(k){if(k.startsWith('pact:')){const pc=PACTS[k.slice(5)];return
  const p=PERKS[k],l=lv(k),desc=(k==='dash'&&l>0)?p.d2:p.d;let pips='';if(!(k==='crust'||k==='stardust'||p.max===1)){for(let i=0;i<p.max;i++)pips+='<i class="'+(i<l?'on':i===l?'nx':'')+'"></i>';pips='<span class="pips">'+pips+'</span>';}
  const rt=p.r==='l'?'<em class="rar">Legendary</em>':p.r==='r'?'<em class="rar">Rare</em>':'';return'<button class="card'+(p.r?' '+p.r:'')+'" data-k="'+k+'"><span class="gl">'+svgI(k)+'</span><span><b>'+p.n+'</b><small>'+desc+'</small>'+pips+rt+'</span></button>';}
 function showPick(reroll){state='pick';if(!reroll)pendingPicks--;touch.on=false;const opts=rollPerks(3+ul('picks'));
- showOv('<div class="kick">'+(reroll?'New options':'You became '+(/^[AEIOU]/.test(STAGES[P.stage].n)?'an ':'a ')+STAGES[P.stage].n)+'</div><div class="psub">Choose an evolution</div><div class="cards">'+opts.map(cardHTML).join('')+'</div>'+(run.rerolls>0?'<button class="btn quiet gold" id="bReroll">Reroll ('+run.rerolls+' left)</button>':''));
+ showOv('<div class="kick">'+(reroll?'New options':'You became '+(/^[AEIOU]/.test(STAGES[P.stage].n)?'an ':'a ')+STAGES[P.stage].n)+'</div><div class="psub">Choose an evolution</div><div class="cards">'+opts.map(cardHTML).join('')+'</div>'+(run.rerolls>0?'<button class="btn quiet gold" id="bReroll">Reroll ('+run.rerolls+' left)</button>':''),false,'tray');
  const cards=[...ov.querySelectorAll('.card')];let ready=false;setTimeout(()=>{cards.forEach(c=>c.classList.add('in'));setTimeout(()=>ready=true,250);},reroll?40:150);
  cards.forEach(c=>c.addEventListener('click',()=>{if(!ready)return;takePerk(c.dataset.k);}));
  on('bReroll',()=>{if(run.rerolls<=0)return;run.rerolls--;showPick(true);});
@@ -1126,16 +1130,18 @@ addEventListener('pagehide',saveRun);
 window.__dbg=()=>({run,P,objs,state,ap:autopilot,zoom});
 window.__acc=()=>({dust:rec.dust,boss:run&&run.boss?run.boss.boss.d.name+' r'+(run.boss.r/P.r).toFixed(2):'',codex:Object.keys(rec.codex).length,shocks:shocks.length,ms:+(benchMs).toFixed(2),killer,state,stage:P&&P.stage,r:P&&+P.r.toFixed(1),cycle:run&&run.cycle,objs:objs.length,parts:parts.length,eaten:run&&run.eaten,perks:run&&run.perks,sprites:SC.size,spx:scPix,hud:$('sname').textContent+' | '+$('smass').textContent});
 // ---------- main loop
-let last=performance.now(),benchMs=0;
+let last=performance.now(),benchMs=0,tScale=1;
 function loop(now){let dt=(now-last)/1000;last=now;if(!(dt>0))dt=0;if(dt>.05)dt=.05;frame++;simT+=dt;
- if(state==='play'||state==='title'||state==='dead'||state==='bang'){cosT+=dt;cosTk-=dt;if(cosTk<=0){cosTk=.2;cosmosTick();}structPos();}
+ tScale+=((state==='pick'?.12:1)-tScale)*Math.min(1,dt*(state==='pick'?7:2.4));
+ if(state==='pick'){const sd=dt*tScale;P.inv=Math.max(P.inv,1);run.time+=sd;updatePlayer(sd,false);stepShocks(sd);stepWorld(sd,true);stepCrumbs(sd,true);camera(sd);stepParts(sd);cosT+=sd;structPos();}
+ if(state==='play'||state==='title'||state==='dead'||state==='bang'){const dt0=dt;dt=state==='play'?dt*tScale:dt;cosT+=dt;cosTk-=dt;if(cosTk<=0){cosTk=.2;cosmosTick();}structPos();}
  if(state==='play'){run.time+=dt;updatePlayer(dt,Q.has('demo'));bossStep(dt);eventStep(dt);anomStep(dt);stepShocks(dt);stepWorld(dt,true);stepCrumbs(dt,true);camera(dt);stepParts(dt);hud();
   if(pendingPicks>0&&state==='play'){pickDelay-=dt;if(pickDelay<=0)showPick();}
   run.saveT-=dt;if(run.saveT<=0){run.saveT=4;saveRun();}}
  else if(state==='title'){updatePlayer(dt,true);stepWorld(dt,true);stepCrumbs(dt,true);camera(dt);stepParts(dt);if(needAttract){needAttract=false;attract();}}
  else if(state==='dead'){deathT+=dt;stepShocks(dt);stepWorld(dt,false);stepParts(dt);if(deathT>1.3&&!overShown)showOver();}
  else if(state==='bang'){bangUpdate(dt);stepWorld(dt,false);camera(dt,run._reset&&bangT<.75);stepParts(dt);}
- if(banner&&state!=='pick'&&state!=='paused')banner.t+=dt;
+ if(banner&&state!=='paused')banner.t+=state==='pick'?dt*.5:dt;
  shake=Math.max(0,shake-dt*2.5);if(state!=='bang')flash=Math.max(0,flash-dt*1.2);frameDt=dt;musicTick();
  const t0=performance.now();render(simT);benchMs=benchMs*.95+(performance.now()-t0)*.05;if(Q.has('bench')&&frame%60===0)document.title='MS '+benchMs.toFixed(2)+' spx '+scPix+' n '+SC.size;requestAnimationFrame(loop);}
 
