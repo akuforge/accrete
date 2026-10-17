@@ -199,7 +199,7 @@ h2{font:600 clamp(40px,12vw,60px)/1 var(--serif);margin:6px 0 20px}
 const $=id=>document.getElementById(id);
 const cv=$('c'),ov=$('ov');let g=cv.getContext('2d');
 const Q=new URLSearchParams(location.search);
-const BUILD='2026-10-17.33';
+const BUILD='2026-10-17.34';
 let W=0,H=0,DPR=1;
 function resize(){DPR=Math.min(window.devicePixelRatio||1,3);let w=window.innerWidth,h=window.innerHeight;
  // iOS home-screen apps can report a viewport shorter than the screen (a black strip at the bottom): take the largest honest height
@@ -256,7 +256,7 @@ const PERKS={
  thrust:{n:'Ion Thrusters',i:'🚀',d:'Move 12% faster',max:5},
  feast:{n:'Efficient Accretion',i:'✨',d:'Gain 12% more mass from everything',max:5},
  crust:{n:'Ablative Crust',i:'🛡️',d:'+1 shield: survive one hit from something bigger',max:99},
- tidal:{n:'Tidal Lock',i:'⚓',d:'Big bodies pull you 30% less',max:3},
+ tidal:{n:'Tidal Lock',i:'⚓',d:'Big bodies pull you 30% less, and tides and stellar wind strip 40% less from you',max:3},
  moonlet:{n:'Moonlet',i:'🌙',d:'A moon orbits you and eats small debris',max:4},
  dash:{n:'Comet Dash',i:'☄️',d:'Tap the screen to dash. Untouchable mid-dash',d2:'Dash recharges faster',max:3},
  rich:{n:'Rich Nebula',i:'🌌',d:'20% more debris around you',max:3},
@@ -278,11 +278,20 @@ const PERKS={
  dhalo:{r:'r',n:'Dark Halo',d:'Bigger bodies near you move 25% slower',max:2},
  seed:{r:'l',n:'Supernova Seed',d:'When a shield breaks you blast everything nearby apart',max:1},
  siphon:{r:'l',n:'Tidal Siphon',d:'Tides feed you instead of tearing you apart',max:1},
+ scoop:{r:'r',n:'Gas Scoop',d:'Gas counts double toward becoming a gas giant and igniting a star',max:1,st:[4,9]},
+ frenzy:{r:'r',n:'Frenzy',d:'Your feeding chain lasts half as long again between swallows, and a full chain doubles your pull for 3 seconds',max:1},
+ keeper:{n:'Moon Keeper',d:'Captured moons stay twice as long and can eat bigger debris',max:2},
+ edge:{r:'r',n:'Roche Edge',d:'Tides no longer tear at you, and things that pass close to you break apart',max:1},
+ aero:{n:'Aerobrake',d:'Skimming a world with air slows you safely and feeds you',max:2},
+ ringm:{r:'r',n:'Ring Maker',d:'Pieces knocked off you fall into orbit and sink back into you',max:1},
+ flare:{r:'r',n:'Solar Flare',d:'Every few seconds you flare, shattering and pushing away what is near',max:1,st:[10,11]},
+ jets:{r:'r',n:'Aimed Jets',d:'Jets fire wherever you fly, even as a black hole, and reach half as far again',max:1,st:[13,14]},
+ merger:{r:'l',n:'Galactic Merger',d:'Swallowing a galaxy also swallows every smaller galaxy near it',max:1,st:[15,16]},
  prosp:{r:'r',n:'Prospector',d:'Golden bodies turn up twice as often and are worth half as much again',max:2},
  momentum:{n:'Momentum',d:'Gain up to 15% more mass per level while moving fast',max:2,r:'r'},
 };
-const PW={stardust:0,dash:0};
-const SN={prosp:'Prospector',well:'Wider Pull',magnet:'Stronger Pull',dense:'Bigger Bites',thrust:'Faster',feast:'More Mass',crust:'Shield',tidal:'Steady',moonlet:'Moon',rich:'More Debris',lens:'See Farther',phoenix:'Extra Life',stardust:'Mass Boost',horizon:'Instant Swallow',binary:'Twin World',chain:'Shockwave',momentum:'Momentum',shatter:'Smash',scav:'Scraps',regolith:'Dust Magnet',ballet:'Orbiters',assist:'Slingshot',armor:'Tough Skin',instinct:'Hunter',spiral:'Dust Burst',lucky:'Lucky',dhalo:'Slow Field',seed:'Nova Shield',siphon:'Tide Feeder'};
+const PW={stardust:0,dash:0,armor:0};
+const SN={scoop:'Gas Scoop',frenzy:'Frenzy',keeper:'Moon Keeper',edge:'Roche Edge',aero:'Aerobrake',ringm:'Ring Maker',flare:'Solar Flare',jets:'Aimed Jets',merger:'Merger',prosp:'Prospector',well:'Wider Pull',magnet:'Stronger Pull',dense:'Bigger Bites',thrust:'Faster',feast:'More Mass',crust:'Shield',tidal:'Steady',moonlet:'Moon',rich:'More Debris',lens:'See Farther',phoenix:'Extra Life',stardust:'Mass Boost',horizon:'Instant Swallow',binary:'Twin World',chain:'Shockwave',momentum:'Momentum',shatter:'Smash',scav:'Scraps',regolith:'Dust Magnet',ballet:'Orbiters',assist:'Slingshot',armor:'Tough Skin',instinct:'Hunter',spiral:'Dust Burst',lucky:'Lucky',dhalo:'Slow Field',seed:'Nova Shield',siphon:'Tide Feeder'};
 const PSN={hunger:'Hunger',glass:'Glass Core',void:'Hunted',haste:'Haste',swarm:'Swarm',weight:'Heavy'};
 const RW={c:1,r:.42,l:.09};const rareBoost=()=>1+.5*(run?lv('lucky'):0);
 const PACTS={
@@ -537,19 +546,20 @@ const clearSave=()=>{try{localStorage.removeItem(SV);}catch(e){}};
 let uid=0,rings=[],shocks=[],evWarn=null,needAttract=false,state='title',P,run,objs=[],parts=[],camX=0,camY=0,zoom=1,shake=0,banner=null,flash=0,pendingPicks=0,pickDelay=0,deathT=0,bangT=0,killer='',overShown=false,newBest=false,simT=0;
 const lv=k=>run.perks[k]||0;const ul=k=>rec.up[k]||0;
 let PREY_EXP=Q.get('prey')?+Q.get('prey'):1.6;const M3=r=>r*r*r,R3=m=>Math.cbrt(Math.max(0,m));
-const GAIN=Q.get('gain')?+Q.get('gain'):1.15,EAT_T=.4,CHAIN_T=.9,CHAIN_MAX=10;const GOLDQ=Q.has('gold');
+const GAIN=Q.get('gain')?+Q.get('gain'):1.15,EAT_T=.4,CHAIN_T=.9,CHAIN_MAX=10;const GOLDQ=Q.has('gold');const chainT=()=>CHAIN_T*(1+.5*lv('frenzy'));
 // Big Bang resistance: perks carry over and stack, so later cycles slow growth by how built-up you are (0..1 of every perk maxed).
 let buildF=0,buildSig='';function buildFrac(){const sig=JSON.stringify(run.perks);if(sig!==buildSig){buildSig=sig;let a=0,b=0;for(const k in PERKS){const p=PERKS[k];if(PW[k]===0||k==='crust')continue;b+=1;a+=Math.min(lv(k),p.max)/p.max;}buildF=b?a/b:0;}return buildF;}
 const RESIST=()=>run.cycle>1?1/(1+RES_K*buildFrac()):1;let RES_K=Q.get('resk')?+Q.get('resk'):2.5;
 const PACE=[0.61,1.16,1.05,0.94,1.2,1.47,0.82,1.37,1.39,1.21,1.18,1.53,0.99,0.84,0.29,0.54,0.8,0.5];
 const gainMult=()=>RESIST()*GAIN*PACE[Math.min(17,P.stage)]*(1+.12*lv('feast'))*(pact('hunger')?1.35:1)*(pact('weight')?1.25:1)*(1+.15*lv('momentum')*clamp(Math.hypot(P.vx,P.vy)/(P.r*4),0,1))*Math.pow(.7,run.cycle-1)/(1+.04*P.stage+.06*Math.max(0,P.stage-11)+.15*Math.max(0,P.stage-12));
-const pullRangeMul=()=>(1+.3*lv('well'))*(org('dark')?1.4:1)*(pact('haste')?.8:1)*(syn('disk')?1.15:1)*(relic('jove')?1.5:1);
-const pullStrMul=()=>(1+.4*lv('magnet'))*(syn('disk')?1.3:1)*(relic('attractor')?1.4:1);
+const pullRangeMul=()=>(P&&P.frenzyT>0?1.4:1)*(1+.3*lv('well'))*(org('dark')?1.4:1)*(pact('haste')?.8:1)*(syn('disk')?1.15:1)*(relic('jove')?1.5:1);
+const pullStrMul=()=>(P&&P.frenzyT>0?2:1)*(1+.4*lv('magnet'))*(syn('disk')?1.3:1)*(relic('attractor')?1.4:1);
 const speedMul=()=>(P&&simT-(P.nebAt||-9)<.2?.72:1)*(1+.12*lv('thrust'))*(org('iron')?.88:1)*(pact('haste')?1.3:1)*(pact('weight')?.8:1);
 const chipMul=()=>(hasLaw('brittle')?1.6:1)*(pact('glass')?2:1)*(org('glass')?2:1);
 const eatRatio=()=>{const b=Math.min(pact('glass')?.995:.985,EAT0+.03*lv('dense')+(pact('glass')?.08:0));return P&&P.stage===13?1.25:P&&P.stage===14?1.2:b;};
 const eatFor=o=>(P.stage>=15&&o.k==='galaxy')?1.4:(syn('sling')&&P.dashT>0)?Math.max(1,eatRatio()):eatRatio();
 const dashCdMax=()=>4.5/(1+.4*(lv('dash')-1));
+const jetMode=()=>P.stage===12?1:(P.stage===14||(P.stage===13&&lv('jets')))?2:0,jl=()=>1+.5*lv('jets');
 const viewR=()=>Math.hypot(W,H)/2/zoom;
 function newPlayer(r){return{x:0,y:0,vx:0,vy:0,r,stage:Math.max(0,Math.min(LAST-1,stageOf(r))),inv:1.5,dashT:0,dashCd:0,fx:1,fy:0,a:0,v:(rand()*6)|0,alive:true,peak:r};}
 function freshRun(){return{origin:null,pacts:[],relics:[],syn:[],rerolls:2,laws:[],gone:new Set(),seed:1,daily:null,bossDone:{},boss:null,evT:rr(35,55),shower:null,perks:{},shields:1,phoenixUsed:false,cycle:1,time:0,eaten:0,cometT:rr(12,20),moonA:0,saveT:4};}
@@ -777,9 +787,9 @@ function codexKey(o){if(o.boss)return null;if(o.neb)return'nebula';if(o.k==='wdw
 function discover(key){if(!key)return;const c=rec.codex[key];if(c){c.n++;return;}rec.codex[key]={n:1,d:Date.now()};saveRec();const e=CODEX.find(x=>x.key===key);if(e)toast('📖 New in your album: '+e.n);}
 function absorb(o,by,mult){if(o.eat>=0)return;o.eat=0;if(o.sys){for(const q of objs){if(q.host===o&&q.eat<0&&!q.dead){q.host=null;absorb(q,by,mult);}}}o.by=by;o.host=null;if(o.sid&&run.gone)run.gone.add(o.sid);if(by===P&&P.stage>=6&&P.stage<=9&&o.r<P.r*.3&&!o.lm)o.burn=1;const dx=o.x-by.x,dy=o.y-by.y;o.ea=Math.atan2(dy,dx);o.ed=Math.hypot(dx,dy);o.ew=(rand()<.5?-1:1)*rr(2,4);o.r0=o.r;
  by.pulse=Math.min(1.5,(by.pulse||0)+.25+o.r/by.r);
- if(by===P){P.lastEat=simT;if(mult>0&&state==='play'){run.chN=simT-(run.chT||-9)<CHAIN_T?(run.chN||0)+1:1;run.chT=simT;mult*=1+.015*Math.min(CHAIN_MAX,run.chN-1);}if(o.gold&&state==='play')goldFound(o);if(o.frag&&o.src!==P)mult*=1+.4*lv('scav');if(state==='play')goalEat(o);run.eatN=(run.eatN||0)+1;if(lv('spiral')&&run.eatN%15===0)crumbBurst(P.x,P.y,P.r*3,24);if(lv('chain')&&o.r>P.r*.5&&state==='play')shocks.push({x:P.x,y:P.y,ref:P,r:P.r,max:P.r*8,spd:P.r*22,str:6,chip:1,self:1,col:[255,205,140]});if(state!=='title')discover(codexKey(o));if(o.boss)bossWin(o);if(o.neb)mult*=1.6;if(state==='play'&&!run.fin&&(o.core||o.sid==='GH')){const home=o.sid==='GH';banner={t:0,txt:home?'Home Swallowed':'Heart of the Galaxy',sub:home?'Every star you grew up among is yours':'Its central black hole is yours'};for(let i=0;i<5;i++)rings.push({ref:P,r0:1+i*.5,r1:10+i*2.5,t:-i*.15,m:1.8,col:[243,181,98],w:2,wave:1});for(let i=0;i<70&&parts.length<520;i++){const f=i/70,a=Math.atan2(o.y-P.y,o.x-P.x)+f*5,dd=Math.hypot(o.x-P.x,o.y-P.y)*(1-f*.5)+P.r*.6;parts.push({x:P.x+Math.cos(a)*dd,y:P.y+Math.sin(a)*dd,vx:0,vy:0,l:0,m:1.2,c:home?[255,236,200]:[200,175,255],s:P.r*.05,tg:P});}tone(65,2.4,'sine',.35,330);chime();}
+ if(by===P){P.lastEat=simT;if(mult>0&&state==='play'){run.chN=simT-(run.chT||-9)<chainT()?(run.chN||0)+1:1;run.chT=simT;mult*=1+.015*Math.min(CHAIN_MAX,run.chN-1);if(lv('frenzy')&&run.chN-1===CHAIN_MAX){P.frenzyT=3;tone(330,.6,'triangle',.12,660);rings.push({ref:P,r0:1,r1:4,t:0,m:.6,col:[243,181,98],w:2});}}if(o.gold&&state==='play')goldFound(o);if(o.frag&&o.src!==P)mult*=1+.4*lv('scav');if(state==='play')goalEat(o);run.eatN=(run.eatN||0)+1;if(lv('spiral')&&run.eatN%15===0)crumbBurst(P.x,P.y,P.r*3,24);if(lv('chain')&&o.r>P.r*.5&&state==='play')shocks.push({x:P.x,y:P.y,ref:P,r:P.r,max:P.r*8,spd:P.r*22,str:6,chip:1,self:1,col:[255,205,140]});if(state!=='title')discover(codexKey(o));if(o.boss)bossWin(o);if(o.neb)mult*=1.6;if(state==='play'&&!run.fin&&(o.core||o.sid==='GH')){const home=o.sid==='GH';banner={t:0,txt:home?'Home Swallowed':'Heart of the Galaxy',sub:home?'Every star you grew up among is yours':'Its central black hole is yours'};for(let i=0;i<5;i++)rings.push({ref:P,r0:1+i*.5,r1:10+i*2.5,t:-i*.15,m:1.8,col:[243,181,98],w:2,wave:1});for(let i=0;i<70&&parts.length<520;i++){const f=i/70,a=Math.atan2(o.y-P.y,o.x-P.x)+f*5,dd=Math.hypot(o.x-P.x,o.y-P.y)*(1-f*.5)+P.r*.6;parts.push({x:P.x+Math.cos(a)*dd,y:P.y+Math.sin(a)*dd,vx:0,vy:0,l:0,m:1.2,c:home?[255,236,200]:[200,175,255],s:P.r*.05,tg:P});}tone(65,2.4,'sine',.35,330);chime();}
  if(P.stage>=12&&(o.k==='hole'||o.k==='quasar')&&o.r>P.r*.3&&state==='play'){mult*=1.3;for(let i=0;i<4;i++)rings.push({ref:P,r0:1+i*.6,r1:9+i*2,t:-i*.15,m:1.6,col:[200,175,255],w:2,wave:1});shocks.push({x:P.x,y:P.y,ref:P,r:P.r,max:P.r*12,spd:P.r*18,str:8,chip:0,self:1,col:[190,160,255]});shake=Math.max(shake,.7);tone(60,1.3,'sine',.35,700);toast('Black holes merged. Spacetime rippled.');}
- if(P.stage>=13&&(o.k==='star'||o.k==='blue'||o.k==='neutron')&&state==='play'){mult*=1.3;const col=KCOL[o.k];for(let i=0;i<46&&parts.length<500;i++){const f=i/46,a=Math.atan2(o.y-P.y,o.x-P.x)+f*4.2,d=Math.hypot(o.x-P.x,o.y-P.y)*(1-f*.6)+P.r*.5;parts.push({x:P.x+Math.cos(a)*d,y:P.y+Math.sin(a)*d,vx:-Math.sin(a)*P.r*4,vy:Math.cos(a)*P.r*4,l:-f*.5,m:1.3,c:col,s:P.r*rr(.05,.12),tg:P});}}if(o.gal)mult*=1.2;grow(M3(o.r)*mult*gainMult(),gasShare(o));P.peak=Math.max(P.peak,P.r);if(mult>0)run.eaten++;if(state==='play')popSound(o.r/P.r);burst(o.x,o.y,o.k,2+Math.min(5,(o.r/P.r*10)|0),P,.6);if(o.r>P.r*.45)rings.push({ref:P,r0:1,r1:1.9,t:0,m:.45,col:KCOL[o.k],w:2.5});checkStage();}
+ if(P.stage>=13&&(o.k==='star'||o.k==='blue'||o.k==='neutron')&&state==='play'){mult*=1.3;const col=KCOL[o.k];for(let i=0;i<46&&parts.length<500;i++){const f=i/46,a=Math.atan2(o.y-P.y,o.x-P.x)+f*4.2,d=Math.hypot(o.x-P.x,o.y-P.y)*(1-f*.6)+P.r*.5;parts.push({x:P.x+Math.cos(a)*d,y:P.y+Math.sin(a)*d,vx:-Math.sin(a)*P.r*4,vy:Math.cos(a)*P.r*4,l:-f*.5,m:1.3,c:col,s:P.r*rr(.05,.12),tg:P});}}if(o.gal)mult*=1.2;if(lv('merger')&&(o.gal||o.k==='galaxy')&&state==='play'&&!o.merged){let n=0;for(const q of objs){if(q===o||q.dead||q.eat>=0||!(q.gal||q.k==='galaxy')||q.r>=P.r*eatFor(q))continue;if(Math.hypot(q.x-o.x,q.y-o.y)<P.r*4){q.merged=1;q.host=null;absorb(q,P,1);n++;}}if(n){rings.push({ref:P,r0:1,r1:6,t:0,m:1,col:[200,175,255],w:2,wave:1});tone(70,1.2,'sine',.25,280);}}grow(M3(o.r)*mult*gainMult(),gasShare(o));P.peak=Math.max(P.peak,P.r);if(mult>0)run.eaten++;if(state==='play')popSound(o.r/P.r);burst(o.x,o.y,o.k,2+Math.min(5,(o.r/P.r*10)|0),P,.6);if(o.r>P.r*.45)rings.push({ref:P,r0:1,r1:1.9,t:0,m:.45,col:KCOL[o.k],w:2.5});checkStage();}
  else{if(mult>0&&!(by.riv&&by.r>P.r*2.6)){by.r=R3(M3(by.r)+M3(o.r)*mult);}if(o.r>P.r*.3)burst(o.x,o.y,o.k,3,by,.6);}}
 // bodies that grow or shrink into a new type keep a similar colour and cross-fade instead of popping
 const AVG=new Map();
@@ -793,7 +803,7 @@ function checkStage(){const ok=STAGES[P.stage].k,ov=P.v;checkStage0();const nk=S
 const GATES={8:{gas:.15,txt:'Gather gas to become a giant',done:'Runaway accretion: you pulled in a whole atmosphere'},10:{gas:.3,txt:'Gather gas to ignite',done:'Enough hydrogen. Fusion ignites.'},14:{chain:5,txt:'Feed fast to light a quasar',done:'Feeding so fast you outshine galaxies'}};
 function gateProg(G,s){return(run.gasM||0)/(G.gas*M3(szSt(s)));}
 function gateCheck(){run.gate=null;if(run.fin||!P.alive||state==='title')return;const s=P.stage+1,G=GATES[s];if(!G||(run.maxStage||0)>=s||stageF(P.r)<s-.3)return;
- const met=G.gas?gateProg(G,s)>=1:(run.chN>=G.chain&&simT-run.chT<CHAIN_T);
+ const met=G.gas?gateProg(G,s)>=1:(run.chN>=G.chain&&simT-run.chT<chainT());
  if(met){if(run.bank){P.r=R3(M3(P.r)+run.bank);run.bank=0;}if(G.gas&&stageF(P.r)>=s)run.gasM=0;return;}
  run.gate=G;const lim=szSt(s)*.995;if(P.r>lim){run.bank=Math.min(M3(lim)*3,(run.bank||0)+M3(P.r)-M3(lim));P.r=lim;}}
 function checkStage0(){gateCheck();const s=Math.min(LAST,stageOf(P.r));if(s===P.stage)return;
@@ -808,7 +818,7 @@ function checkStage0(){gateCheck();const s=Math.min(LAST,stageOf(P.r));if(s===P.
  newGoal();
  if(s>=13&&prev<13){for(let i=0;i<4;i++)rings.push({ref:P,r0:7-i,r1:1,t:-i*.12,m:.9,col:[190,140,255],w:3});}chime();rings.push({ref:P,r0:1,r1:10,t:0,m:1.3,col:[255,220,170],w:4});rings.push({ref:P,wheel:1,r0:1,r1:1,t:0,m:2.4,col:[243,181,98],w:1});burst(P.x,P.y,STAGES[s].k,24,null,1.4);}
 function chipPlayer(o,nx,ny,frac){if(P.chipCd>0)return;if(P.lastChip===o&&simT-P.lastChipT<2.5&&o.r>P.r*1.25){hitPlayer(o);return;}P.lastChip=o;P.lastChipT=simT;if(o.riv){o.riv.mode='rest';o.riv.th=2;o.riv.tx=o.x-nx*P.r*30;o.riv.ty=o.y-ny*P.r*30;}P.chipCd=.6;const m=M3(P.r)*frac*1.4,ix=P.x-nx*P.r,iy=P.y-ny*P.r;P.r=R3(M3(P.r)-m);
- spray(ix,iy,Math.atan2(ny,nx)+(rand()<.5?-1.3:1.3),m,P,P.vx*.3,P.vy*.3);sparks(ix,iy,12);shake=Math.max(shake,.45);crunch(1);tone(180,.25,'square',.08,70);
+ {const fr=spray(ix,iy,Math.atan2(ny,nx)+(rand()<.5?-1.3:1.3),m,P,P.vx*.3,P.vy*.3);if(lv('ringm'))for(const f of fr){const dx=f.x-P.x,dy=f.y-P.y;f.host=P;f.orbR=Math.max(P.r*1.5,Math.hypot(dx,dy))*rr(1.1,1.5);f.orbA=Math.atan2(dy,dx);f.orbW=(rand()<.5?-1:1)*rr(.8,1.1)*Math.pow(P.r/f.orbR,1.5)*2.4;f.decay=rr(.03,.05);f.ringm=1;f.srcT=0;}}sparks(ix,iy,12);shake=Math.max(shake,.45);crunch(1);tone(180,.25,'square',.08,70);
  rings.push({ref:P,r0:1.05,r1:1.5,t:0,m:.35,col:[255,90,90],w:3});P.pulse=0;checkStage();
  if(!rec.chipTip){rec.chipTip=1;saveRec();toast('💥 Bumping bigger bodies knocks pieces off you');}}
 function hitPlayer(o){
@@ -849,7 +859,7 @@ let grid=new Map(),CS=1;
 const ck=(x,y)=>x*131071+y;
 function buildGrid(){grid.clear();CS=P.r*2;for(const o of objs){if(o.dead||o.eat>=0)continue;const k=ck(Math.floor(o.x/CS),Math.floor(o.y/CS)),a=grid.get(k);if(a)a.push(o);else grid.set(k,[o]);}}
 function near(x,y,rad,fn){const x0=Math.floor((x-rad)/CS),x1=Math.floor((x+rad)/CS),y0=Math.floor((y-rad)/CS),y1=Math.floor((y+rad)/CS);if((x1-x0+1)*(y1-y0+1)>900)return;for(let cx=x0;cx<=x1;cx++)for(let cy=y0;cy<=y1;cy++){const a=grid.get(ck(cx,cy));if(a)for(let i=0;i<a.length;i++)fn(a[i]);}}
-function spray(ix,iy,ang,m,src,bvx,bvy){const n=2+((rand()*3)|0),rf=R3(m*.8/n),gs=src===P?(run.gasF||0):src?gasShare(src):0;if(rf<P.r*.025||objs.length>360)return;for(let i=0;i<n;i++){const a=ang+rr(-1.1,1.1),s=P.r*rr(1.2,3.2),f=makeObj(ix,iy,rf*rr(.7,1.25));f.vx=bvx+Math.cos(a)*s;f.vy=bvy+Math.sin(a)*s;f.sp=rr(-4,4);f.frag=1;f.gs=gs;f.src=src;f.srcT=.6;objs.push(f);}}
+function spray(ix,iy,ang,m,src,bvx,bvy){const n=2+((rand()*3)|0),rf=R3(m*.8/n),gs=src===P?(run.gasF||0):src?gasShare(src):0,out=[];if(rf<P.r*.025||objs.length>360)return out;for(let i=0;i<n;i++){const a=ang+rr(-1.1,1.1),s=P.r*rr(1.2,3.2),f=makeObj(ix,iy,rf*rr(.7,1.25));f.vx=bvx+Math.cos(a)*s;f.vy=bvy+Math.sin(a)*s;f.sp=rr(-4,4);f.frag=1;f.gs=gs;f.src=src;f.srcT=.6;objs.push(f);out.push(f);}return out;}
 function chip(o,ix,iy,ang,frac){if(o.cd>0||o.r<P.r*.1)return;o.cd=.7;const m=M3(o.r)*frac;o.r=R3(M3(o.r)-m);spray(ix,iy,ang,m,o,o.vx,o.vy);}
 function onScreen(x,y){const sx=(x-camX)*zoom+W/2,sy=(y-camY)*zoom+H/2;return sx>0&&sx<W&&sy>0&&sy<H;}
 function collide(a,b,nx,ny,ov){const fa=a.host||a.lm,fb=b.host||b.lm,ma=fa?1e12:a.r*a.r,mb=fb?1e12:b.r*b.r,t=ma+mb;
@@ -876,7 +886,7 @@ function stepWorld(dt,live){
   if(o.eat>=0){const b=o.by;o.eat+=dt/EAT_T;if(o.eat>=1||(b!==P&&b.dead)||(b===P&&!P.alive)){o.dead=1;continue;}const t=o.eat;o.ea+=o.ew*dt*(1+t*2);const dd=o.ed*Math.pow(1-t,1.6);o.x=b.x+Math.cos(o.ea)*dd;o.y=b.y+Math.sin(o.ea)*dd;
    if(o.r0*zoom>2&&rand()<.5&&parts.length<500)parts.push({x:o.x,y:o.y,vx:0,vy:0,l:0,m:.3,c:KCOL[o.k],s:o.r0*.25,tg:b});continue;}
   o.cd=Math.max(0,o.cd-dt);o.srcT=Math.max(0,o.srcT-dt);o.pulse=Math.max(0,o.pulse-dt*3);
-  if(o.host){const h=o.host;if(h.dead||h.eat>=0||(h===P&&!P.alive))o.host=null;else if(o.decay&&(o.orbR-=o.orbR*o.decay*dt)<h.r*1.02+o.r*.5){absorb(o,h,(h.r>pr*3.5||h.boss||h.bh||h.lm)?0:.6);continue;}else{o.orbA+=o.orbW*dt;const c=Math.cos(o.orbA),s=Math.sin(o.orbA);o.x=h.x+c*o.orbR;o.y=h.y+s*o.orbR;o.vx=h.vx-s*o.orbW*o.orbR;o.vy=h.vy+c*o.orbW*o.orbR;}}
+  if(o.host){const h=o.host;if(h.dead||h.eat>=0||(h===P&&!P.alive))o.host=null;else if(o.decay&&(o.orbR-=o.orbR*o.decay*dt)<h.r*1.02+o.r*.5){absorb(o,h,(h.r>pr*3.5||h.boss||h.bh||h.lm)?0:o.ringm?.9:.6);continue;}else{o.orbA+=o.orbW*dt;const c=Math.cos(o.orbA),s=Math.sin(o.orbA);o.x=h.x+c*o.orbR;o.y=h.y+s*o.orbR;o.vx=h.vx-s*o.orbW*o.orbR;o.vy=h.vy+c*o.orbW*o.orbR;}}
   if(o.riv)rivalThink(o,dt,pl);
   const dx=P.x-o.x,dy=P.y-o.y,d2=dx*dx+dy*dy;
   const far=(o.boss||o.lm)?false:o.bh?d2>A2*4:d2>A2;if(far||(o.r<tiny&&d2>VR*VR)){o.dead=1;continue;}
@@ -884,16 +894,17 @@ function stepWorld(dt,live){
   else if(o.gal){if(pl&&o.r<pr*eatFor(o)&&d2<pr*pr*.8)absorb(o,P,1);}
   else if(pl){const edible=o.r<pr*eatFor(o),threat=!edible&&o.r*EAT0>pr;
    // tidal breakup: hang too close to something 3-15x your size and it pulls you apart
-   if(threat&&!o.com&&o.r>pr*3&&o.r<pr*15&&P.inv<=0&&state==='play'){const sd=Math.sqrt(d2)-o.r,zn=o.r*.55;if(sd>0&&sd<zn){const k=(1-sd/zn)*.065*dt*tidal*lawG*(org('comet')?2:1)*Math.pow(.6,lv('armor')),m=M3(P.r)*k;if(lv('siphon')){grow(m*.6,gasShare(o));P.tshed=0;}else P.r=R3(M3(P.r)-m);P.tshed=(P.tshed||0)+m;
+   if(threat&&!lv('edge')&&!o.com&&o.r>pr*3&&o.r<pr*15&&P.inv<=0&&state==='play'){const sd=Math.sqrt(d2)-o.r,zn=o.r*.55;if(sd>0&&sd<zn){const k=(1-sd/zn)*.065*dt*tidal*lawG*(org('comet')?2:1)*Math.pow(.6,lv('tidal')),m=M3(P.r)*k;if(lv('siphon')){grow(m*.6,gasShare(o));P.tshed=0;}else P.r=R3(M3(P.r)-m);P.tshed=(P.tshed||0)+m;
      if(rand()<.6&&parts.length<500){const a2=rand()*TAU;parts.push({x:P.x+Math.cos(a2)*P.r,y:P.y+Math.sin(a2)*P.r,vx:-dx/Math.sqrt(d2)*P.r*3,vy:-dy/Math.sqrt(d2)*P.r*3,l:0,m:.7,c:KCOL[STAGES[P.stage].k],s:P.r*.08,tg:o});}
      if(P.tshed>M3(P.r)*.02){spray(P.x-dx/Math.sqrt(d2)*P.r,P.y-dy/Math.sqrt(d2)*P.r,Math.atan2(-dy,-dx),P.tshed,P,P.vx,P.vy);P.tshed=0;checkStage();}
      if(!rec.tideTip){rec.tideTip=1;saveRec();toast('🌊 Too close! Its tides are pulling you apart');}}}
    if(edible&&!o.riv&&!o.com&&!o.lm&&d2<gR2){o.host=null;const d=Math.sqrt(d2)||1;
     if(starLight&&o.r<pr*.06){const f=gA*.8*(1-d/gR)/d*dt;o.vx-=dx*f;o.vy-=dy*f;}
     else{// a mid-sized chunk can fall into orbit around you instead of straight in
-     if(o.r>pr*.1&&o.r<pr*.3&&d>pr*1.6&&P.nsat<3+lv('moonlet')+lv('ballet')&&rand()<dt*.5*(1+lv('ballet'))){const cr=dx*o.vy-dy*o.vx;o.host=P;o.orbR=d;o.orbA=Math.atan2(-dy,-dx);o.orbW=(cr>0?-1:1)*rr(.7,1)*Math.pow(pr/d,1.5)*2.4;o.decay=rr(.008,.02)*(1+lv('ballet'));P.nsat++;goalHit('capture');rings.push({ref:o,r0:1,r1:3,t:0,m:.5,col:[170,210,255],w:1.5});if(!rec.moonTip){rec.moonTip=1;saveRec();toast('A moon fell into orbit. It feeds you until it sinks in');}}
+     if(o.r>pr*.1&&o.r<pr*.3&&d>pr*1.6&&P.nsat<3+lv('moonlet')+lv('ballet')&&rand()<dt*.5*(1+lv('ballet'))){const cr=dx*o.vy-dy*o.vx;o.host=P;o.orbR=d;o.orbA=Math.atan2(-dy,-dx);o.orbW=(cr>0?-1:1)*rr(.7,1)*Math.pow(pr/d,1.5)*2.4;o.decay=rr(.008,.02)*(1+lv('ballet'))/(1+lv('keeper'));P.nsat++;goalHit('capture');rings.push({ref:o,r0:1,r1:3,t:0,m:.5,col:[170,210,255],w:1.5});if(!rec.moonTip){rec.moonTip=1;saveRec();toast('A moon fell into orbit. It feeds you until it sinks in');}}
      else{const q=pr/Math.max(d,pr),f=gA*1.5*q*q*(1-d2/gR2)/d*dt;o.vx+=dx*f;o.vy+=dy*f;o.pulled=2;}}}
-   else if(threat&&!o.com){const rg=o.r+Math.min(o.r*((o.pullR||3.6)-1),pr*10);if(d2<rg*rg){const d=Math.sqrt(d2)||1,q=o.r/Math.max(d,o.r),e=Math.max(0,d-o.r)/(rg-o.r),f=pr*(o.pullS||7.5)*tidal*lawG*(1+.4*lv('assist'))*clamp(.55*Math.sqrt(o.r/pr),.55,1.35)*q*q*(1-e*e)/d*dt;P.vx-=dx*f;P.vy-=dy*f;}}
+   if(lv('aero')&&threat&&LIMB[o.k]===1&&state==='play'){const sd=Math.sqrt(d2)-o.r-pr;if(sd>0&&sd<pr*1.2){const k=Math.min(1,dt*1.6*lv('aero'));P.vx+=(o.vx-P.vx)*k;P.vy+=(o.vy-P.vy)*k;grow(M3(P.r)*.012*lv('aero')*dt*gainMult()/GAIN,gasShare(o));P.lastEat=simT;if(rand()<dt*12&&parts.length<480){const a=Math.atan2(-dy,-dx);parts.push({x:P.x+Math.cos(a)*pr,y:P.y+Math.sin(a)*pr,vx:0,vy:0,l:0,m:.4,c:limbCol(o.k,o.v),s:pr*.06,tg:P});}}}
+   if(threat&&!o.com){const rg=o.r+Math.min(o.r*((o.pullR||3.6)-1),pr*10);if(d2<rg*rg){const d=Math.sqrt(d2)||1,q=o.r/Math.max(d,o.r),e=Math.max(0,d-o.r)/(rg-o.r),f=pr*(o.pullS||7.5)*tidal*lawG*(1+.4*lv('assist'))*clamp(.55*Math.sqrt(o.r/pr),.55,1.35)*q*q*(1-e*e)/d*dt;P.vx-=dx*f;P.vy-=dy*f;}}
    const rs=pr+o.r;
    if(d2<rs*rs&&!o.gal){const d=Math.sqrt(d2)||1e-6;
     if(edible){if(d<pr+o.r*.2&&!(o.src===P&&o.srcT>0))absorb(o,P,o.com?1.3:o.riv?(pact('void')?2.7:.9)*(1+.5*lv('instinct')):1);}
@@ -904,7 +915,8 @@ function stepWorld(dt,live){
     else{const nx=dx/d,ny=dy/d,ovl=rs-d,mp=pr*pr,mo=o.r*o.r,tot=mp+mo;if(P.inv<=0&&state==='play'&&Math.abs((P.vx-o.vx)*nx+(P.vy-o.vy)*ny)>pr*.9)chipPlayer(o,nx,ny,.06*chipMul());P.x+=nx*ovl*mo/tot;P.y+=ny*ovl*mo/tot;if(!o.host&&!o.lm){o.x-=nx*ovl*mp/tot;o.y-=ny*ovl*mp/tot;}if(!o.lm)o.host=null;const rv=(P.vx-o.vx)*nx+(P.vy-o.vy)*ny;
      if(rv<0){const j=-1.6*rv/tot;P.vx+=j*mo*nx;P.vy+=j*mo*ny;if(!o.lm){o.vx-=j*mp*nx;o.vy-=j*mp*ny;}
       if(-rv>pr*.45){const ix=P.x-nx*pr,iy=P.y-ny*pr;chip(o,ix,iy,Math.atan2(-ny,-nx)+(rand()<.5?-1.2:1.2),.18*(1+lv('shatter')));goalHit('chip');sparks(ix,iy,10);shake=Math.max(shake,.25);crunch(.8);}}}}
-   if(nat.length&&o.eat<0&&o.host!==P&&!o.riv&&!o.lm){for(const q of nat){const qx=q.x-o.x,qy=q.y-o.y,q2=q.r+o.r;if(o.r<q.r*1.1&&qx*qx+qy*qy<q2*q2){absorb(o,P,.8);break;}}}
+   if(lv('edge')&&o.cd<=0&&!o.lm&&!o.boss&&o.host!==P&&o.r>pr*.3&&o.r<pr*2.5&&state==='play'){const sd=Math.sqrt(d2)-pr-o.r;if(sd>0&&sd<pr*.8){const a=Math.atan2(-dy,-dx);chip(o,o.x+Math.cos(a+Math.PI)*o.r,o.y+Math.sin(a+Math.PI)*o.r,a+Math.PI+rr(-.6,.6),.16);sparks(o.x-dx/Math.sqrt(d2)*o.r,o.y-dy/Math.sqrt(d2)*o.r,4);}}
+   if(nat.length&&o.eat<0&&o.host!==P&&!o.riv&&!o.lm){for(const q of nat){const qx=q.x-o.x,qy=q.y-o.y,q2=q.r+o.r;if(o.r<q.r*(1.1+.5*lv('keeper'))&&qx*qx+qy*qy<q2*q2){absorb(o,P,.8);break;}}}
    if(nm&&o.eat<0&&!o.riv&&!o.lm){for(let j=0;j<nm;j++){const qx=mx[j]-o.x,qy=my[j]-o.y,q=mR+o.r;if(qx*qx+qy*qy<q*q){if(o.r<mR*1.1){absorb(o,P,.8);break;}if(syn('roche')&&o.cd<=0){chip(o,mx[j],my[j],Math.atan2(-qy,-qx),.15);sparks(mx[j],my[j],5);break;}}}}
    if(lv('binary')&&o.eat<0&&!o.riv&&!o.lm&&o.r<pr*.4){const qx=bx-o.x,qy=by-o.y,q=pr*.32+o.r;if(qx*qx+qy*qy<q*q)absorb(o,P,.8);}
    if(lv('horizon')&&o.eat<0&&!o.lm&&!o.riv&&o.r<pr/3&&d2<gR2*.85)absorb(o,P,1);}
@@ -916,7 +928,7 @@ function stepWorld(dt,live){
   const dx=b.x-a.x,dy=b.y-a.y,rs=a.r+b.r,d2=dx*dx+dy*dy;if(d2>=rs*rs)return;const d=Math.sqrt(d2)||1e-6;
   if(b.r<a.r*EAT0&&(a.boss||a.bh||inV(a))&&!(b.lm&&!a.boss&&!a.bh)){if(d<a.r+b.r*.2&&!(b.src===a&&b.srcT>0)&&b.shedBy!==a)absorb(b,a,(a.r>pr*3.5||a.boss||a.bh||a.lm)?0:.6);}
   else collide(a,b,dx/d,dy/d,rs-d);});}
- if(pl&&state==='play'&&(P.stage===12||P.stage===14)){const L=pr*(P.stage===12?7:9),wd=pr*(P.stage===12?.15:.25),ux=P.stage===12?-Math.sin(P.a):P.fx,uy=P.stage===12?Math.cos(P.a):P.fy,ul=Math.hypot(ux,uy)||1,qx=ux/ul,qy=uy/ul,big=pr*(P.stage===12?2.5:3);
+ if(pl&&state==='play'&&jetMode()){const L=pr*(P.stage===12?7:9*jl()),wd=pr*(P.stage===12?.15:.25),ux=P.stage===12?-Math.sin(P.a):P.fx,uy=P.stage===12?Math.cos(P.a):P.fy,ul=Math.hypot(ux,uy)||1,qx=ux/ul,qy=uy/ul,big=pr*(P.stage===12?2.5:3);
   for(const o of objs){if(o.dead||o.eat>=0||o.gal||o.host===P||o.r>big)continue;const dx=o.x-P.x,dy=o.y-P.y,t=dx*qx+dy*qy,at=Math.abs(t);if(at<pr*.8||at>L+o.r)continue;const perp=Math.abs(dx*qy-dy*qx);if(perp>o.r+wd)continue;const sg=t>0?1:-1;
    if(o.r<pr*.15){if(!o.lm){o.vx+=qx*sg*pr*14*dt;o.vy+=qy*sg*pr*14*dt;}}else if(o.cd<=0){chip(o,o.x-qx*sg*o.r,o.y-qy*sg*o.r,Math.atan2(qy*sg,qx*sg)+rr(-.6,.6),P.stage===12?.2:.25);sparks(o.x-qx*sg*o.r,o.y-qy*sg*o.r,6);}}}
  let j=0;for(const o of objs)if(!o.dead)objs[j++]=o;objs.length=j;
@@ -926,7 +938,7 @@ function stepWorld(dt,live){
 // ---------- growth and composition. Mass is volume; run.gasF is the share of you that is gas (hydrogen, helium).
 const CRUMB_K=10;
 function gasShare(o){if(o.gs!=null)return o.gs;if(o.neb||o.k==='nebula')return 1;if(o.k==='gas'||o.k==='brown')return .9;if(o.k==='star'||o.k==='blue'||o.k==='wdwarf')return .85;if(o.k==='ice'||o.k==='comet')return .1;return 0;}
-function grow(m,gs){if(!(m>0))return;const M=M3(P.r);run.gasF=((run.gasF||0)*M+gs*m)/(M+m);run.gasM=(run.gasM||0)+gs*m;P.r=R3(M+m);}
+function grow(m,gs){if(!(m>0))return;const M=M3(P.r);run.gasF=((run.gasF||0)*M+gs*m)/(M+m);run.gasM=(run.gasM||0)+gs*m*(1+lv('scoop'));P.r=R3(M+m);}
 // ---------- golden bodies: rare glinting debris, worth stardust when you swallow it
 let floaters=[];
 function goldFound(o){discover('gold');const d=Math.round((2+Math.floor(P.stage/3)+2*(run.cycle-1))*(1+.5*lv('prosp')));run.bonusDust=(run.bonusDust||0)+d;run.golds=(run.golds||0)+1;floaters.push({x:o.x,y:o.y,t:0,txt:'+'+d});rings.push({ref:P,r0:1,r1:3.2,t:0,m:.6,col:[243,181,98],w:2});
@@ -1047,10 +1059,11 @@ function updatePlayer(dt,auto){let ix=0,iy=0,im=0;
  P.x+=P.vx*dt;P.y+=P.vy*dt;
  const sk=SKINS.find(x=>x.id===rec.skin);if(sk&&sk.col&&state==='play'&&parts.length<500&&Math.hypot(P.vx,P.vy)>P.r*.8){const c=sk.col==='rainbow'?[127+127*Math.sin(simT*3),127+127*Math.sin(simT*3+2.1),127+127*Math.sin(simT*3+4.2)]:sk.col,a=rand()*TAU;parts.push({x:P.x-P.vx*.08+Math.cos(a)*P.r*.4,y:P.y-P.vy*.08+Math.sin(a)*P.r*.4,vx:-P.vx*.25,vy:-P.vy*.25,l:0,m:.6,c,s:P.r*rr(.12,.25),tg:null});}
  if(state==='play'&&pact('hunger')&&simT-(P.lastEat||simT)>3){P.r*=Math.sqrt(1-.012*dt);P.hT=(P.hT||0)+dt;if(P.hT>1){P.hT=0;checkStage();}}
+ if(state==='play'&&lv('flare')&&P.stage>=10&&P.stage<=11){P.flT=(P.flT||0)+dt;if(P.flT>7){P.flT=0;shocks.push({x:P.x,y:P.y,ref:P,r:P.r,max:P.r*8,spd:P.r*18,str:10,chip:1,self:1,col:[255,205,130]});flash=Math.max(flash,.08);tone(140,.8,'sine',.18,70);}}
  if(state==='play'&&relic('wrath')){P.wT=(P.wT||0)+dt;if(P.wT>10){P.wT=0;shocks.push({x:P.x,y:P.y,ref:P,r:P.r,max:P.r*7,spd:P.r*16,str:9,chip:0,self:1,col:[255,120,80]});tone(120,.6,'sawtooth',.1,60);}}
- if(state==='play'&&P.stage===11){const k=.004*dt*Math.pow(.6,lv('armor'));P.r*=Math.sqrt(1-k);if(parts.length<500){const a=rand()*TAU;parts.push({x:P.x+Math.cos(a)*P.r,y:P.y+Math.sin(a)*P.r,vx:Math.cos(a)*P.r*4,vy:Math.sin(a)*P.r*4,l:0,m:.5,c:[170,200,255],s:P.r*.06,tg:null});}P.windT=(P.windT||0)+dt;if(P.windT>1){P.windT=0;checkStage();}}
+ if(state==='play'&&P.stage===11){const k=.004*dt*Math.pow(.6,lv('tidal'));P.r*=Math.sqrt(1-k);if(parts.length<500){const a=rand()*TAU;parts.push({x:P.x+Math.cos(a)*P.r,y:P.y+Math.sin(a)*P.r,vx:Math.cos(a)*P.r*4,vy:Math.sin(a)*P.r*4,l:0,m:.5,c:[170,200,255],s:P.r*.06,tg:null});}P.windT=(P.windT||0)+dt;if(P.windT>1){P.windT=0;checkStage();}}
  if((P.stage===13||P.stage===14)&&state!=='title'&&parts.length<480)for(let i=0;i<2;i++){const a=rand()*TAU,d=P.r*rr(1.25,2.3);parts.push({x:P.x+Math.cos(a)*d,y:P.y+Math.sin(a)*d,vx:-Math.sin(a)*P.r*5+P.vx,vy:Math.cos(a)*P.r*5+P.vy,l:0,m:rr(.4,.8),c:rand()<.5?[255,190,110]:[255,240,210],s:P.r*.05,tg:P});}
- P.pulse=Math.max(0,(P.pulse||0)-dt*3);P.chipCd=Math.max(0,(P.chipCd||0)-dt);P.inv=Math.max(0,P.inv-dt);P.dashCd=Math.max(0,P.dashCd-dt);if(P.stage===12)P.a+=dt*2.4;else if(P.stage===14){const ta=Math.atan2(-P.fx,P.fy);let da=ta-P.a;da=Math.atan2(Math.sin(da),Math.cos(da));P.a+=da*Math.min(1,dt*6);}else P.a+=dt*.25;}
+ P.pulse=Math.max(0,(P.pulse||0)-dt*3);P.frenzyT=Math.max(0,(P.frenzyT||0)-dt);P.chipCd=Math.max(0,(P.chipCd||0)-dt);P.inv=Math.max(0,P.inv-dt);P.dashCd=Math.max(0,P.dashCd-dt);if(P.stage===12)P.a+=dt*2.4;else if(P.stage===14){const ta=Math.atan2(-P.fx,P.fy);let da=ta-P.a;da=Math.atan2(Math.sin(da),Math.cos(da));P.a+=da*Math.min(1,dt*6);}else P.a+=dt*.25;}
 
 // ---------- camera + background
 const STARS=[];for(let L=0;L<3;L++)for(let i=0;i<[90,50,22][L];i++)STARS.push({x:rand(),y:rand(),L,s:[.7,1.1,1.7][L]*rr(.6,1.2),b:rr(.3,1),tw:rand()*TAU});
@@ -1151,9 +1164,9 @@ function render(t){
  if(state==='title'){const cx=W/2,cy=H*.33,M=Math.min(W,H);[.2,.3,.41,.53].forEach((q,i)=>{const R=M*q;atlasRing(cx,cy,R,.16,i===1||i===3?72:36,simT*.02*(i%2?1:-1),i===2);const a=simT*(.25/(i+1))+i*1.7;g.fillStyle='rgba('+GOLD+',.55)';g.beginPath();g.arc(cx+Math.cos(a)*R,cy+Math.sin(a)*R,i===3?3.4:2.4,0,TAU);g.fill();});g.fillStyle=radial(g,cx,cy,0,cx,cy,M*.08,[[0,'rgba(243,181,98,.22)'],[1,'rgba(243,181,98,0)']]);g.fillRect(cx-M*.08,cy-M*.08,M*.16,M*.16);}
  if(flash>0){g.fillStyle='rgba(255,250,240,'+flash+')';g.fillRect(0,0,W,H);}}
 function drawPlayer(z,ox,oy,t){if(!P.alive)return;const x=P.x*z+ox,y=P.y*z+oy,rs=P.r*z*(1+.1*(P.pulse||0)),k=STAGES[P.stage].k;
- if((P.stage===12||P.stage===14)&&state!=='title'){const L=P.r*z*(P.stage===12?7:9),wd=P.r*z*(P.stage===12?.15:.25),ux=P.stage===12?-Math.sin(P.a):P.fx,uy=P.stage===12?Math.cos(P.a):P.fy,ul=Math.hypot(ux,uy)||1,qx=ux/ul,qy=uy/ul,col=P.stage===12?'160,230,255':'190,210,255';g.globalCompositeOperation='lighter';
+ if(jetMode()&&state!=='title'){const L=P.r*z*(P.stage===12?7:9*jl()),wd=P.r*z*(P.stage===12?.15:.25),ux=P.stage===12?-Math.sin(P.a):P.fx,uy=P.stage===12?Math.cos(P.a):P.fy,ul=Math.hypot(ux,uy)||1,qx=ux/ul,qy=uy/ul,col=P.stage===12?'160,230,255':'190,210,255';g.globalCompositeOperation='lighter';
   for(const sg of [1,-1]){const ex=x+qx*sg*L,ey=y+qy*sg*L,gr=g.createLinearGradient(x,y,ex,ey);gr.addColorStop(0,'rgba('+col+',.75)');gr.addColorStop(1,'rgba('+col+',0)');g.fillStyle=gr;g.beginPath();g.moveTo(x-qy*wd,y+qx*wd);g.lineTo(ex-qy*wd*.3,ey+qx*wd*.3);g.lineTo(ex+qy*wd*.3,ey-qx*wd*.3);g.lineTo(x+qy*wd,y-qx*wd);g.closePath();g.fill();}g.globalCompositeOperation='source-over';}
- if(state!=='title'){const gR=P.r*2*pullRangeMul()*(P.stage>=15?1.8:1)*z,live=run.chN>1&&simT-run.chT<CHAIN_T,nb=live?Math.min(CHAIN_MAX,run.chN-1):(P.beads||0),fa=live?1:clamp(1-(simT-(run.chT||0)-CHAIN_T)/.45,0,1),full=nb>=CHAIN_MAX;if(live)P.beads=nb;
+ if(state!=='title'){const gR=P.r*2*pullRangeMul()*(P.stage>=15?1.8:1)*z,live=run.chN>1&&simT-run.chT<chainT(),nb=live?Math.min(CHAIN_MAX,run.chN-1):(P.beads||0),fa=live?1:clamp(1-(simT-(run.chT||0)-chainT())/.45,0,1),full=nb>=CHAIN_MAX;if(live)P.beads=nb;
   atlasRing(x,y,gR,.34+(full?.25*fa:0),72,simT*.04,false);atlasRing(x,y,gR*.9,.12,0,0,false);
   // chain beads: one per swallow in a quick run; a full ring is the biggest bonus
   if(nb>0&&fa>0){g.fillStyle='rgba(255,226,160,'+(.9*fa).toFixed(3)+')';const R2=gR*.95;for(let i=0;i<nb;i++){const a=-Math.PI/2+i*TAU/CHAIN_MAX+simT*.25;g.beginPath();g.arc(x+Math.cos(a)*R2,y+Math.sin(a)*R2,i===nb-1&&live?2.6:2,0,TAU);g.fill();}}}
@@ -1211,6 +1224,15 @@ const ICONS={
  seed:'<circle cx="12" cy="12" r="2.4" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="5.5"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>',
  siphon:'<path d="M3 9c3-3 6 3 9 0s6-3 9 0"/><path d="M3 15c3-3 6 3 9 0s6-3 9 0"/>',
  prosp:'<path d="M5 9.5L8.5 5h7L19 9.5 12 20z"/><path d="M5 9.5h14M10 5l2 4.5L14 5" opacity=".55"/>',
+ scoop:'<path d="M4 12a8 8 0 0 0 16 0z"/><path d="M8 7.5c1-1.2 2.4-1.2 3.4 0s2.4 1.2 3.4 0M7 4c1-1.2 2.4-1.2 3.4 0s2.4 1.2 3.4 0" opacity=".55"/>',
+ frenzy:'<circle cx="12" cy="12" r="8"/><circle cx="12" cy="4" r="1.3" fill="currentColor" stroke="none"/><circle cx="19" cy="9.5" r="1.3" fill="currentColor" stroke="none"/><circle cx="16.5" cy="18.5" r="1.3" fill="currentColor" stroke="none"/><circle cx="7.5" cy="18.5" r="1.3" fill="currentColor" stroke="none"/><circle cx="5" cy="9.5" r="1.3" fill="currentColor" stroke="none"/>',
+ keeper:'<circle cx="12" cy="12" r="3.4"/><circle cx="12" cy="12" r="8.5" stroke-dasharray="3 2.4"/><circle cx="18" cy="6" r="1.6" fill="currentColor" stroke="none"/>',
+ edge:'<circle cx="8" cy="12" r="4.5"/><path d="M15 6.5l2 2.5-2 3 2.5 2.5-1.5 3" opacity=".7"/><path d="M19.5 9l1 1M19 15.5l1.3.4"/>',
+ aero:'<path d="M3 17c4-6 14-6 18 0"/><path d="M5 10.5l9-3.5 4 1.5" /><circle cx="18.5" cy="8.4" r="1.4" fill="currentColor" stroke="none"/>',
+ ringm:'<circle cx="12" cy="12" r="3.2"/><circle cx="12" cy="12" r="8" stroke-dasharray="1.6 3"/><path d="M20.5 3.5l-3.4 3.4M17.1 3.6v3.3h3.3"/>',
+ flare:'<circle cx="12" cy="12" r="3.6"/><path d="M12 2.5v3.3M12 18.2v3.3M2.5 12h3.3M18.2 12h3.3M5.3 5.3l2.3 2.3M16.4 16.4l2.3 2.3M18.7 5.3l-2.3 2.3M7.6 16.4l-2.3 2.3"/>',
+ jets:'<circle cx="12" cy="12" r="3"/><path d="M12 9V2.5M12 15v6.5" stroke-width="2.2"/><ellipse cx="12" cy="12" rx="8" ry="2.6" opacity=".55"/>',
+ merger:'<path d="M5 9c2-3 6-3 7 0s-3 5-6 3"/><path d="M19 15c-2 3-6 3-7 0s3-5 6-3"/><circle cx="12" cy="12" r="1.3" fill="currentColor" stroke="none"/>',
  eye:'<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/>'
 };
 const svgI=k=>'<svg class="i" viewBox="0 0 24 24" aria-hidden="true">'+(ICONS[k]||'')+'</svg>';
@@ -1220,7 +1242,7 @@ function railPos(i,stg){const n=LAST,cur=.42,oth=(1-cur)/(n-1);return i<=stg?i*o
 function massHTML(r){const t=massText(r),m=t.match(/^([\d.]+) × 10(\S+) kg$/);if(!m)return t;return m[1]+'×10<sup>'+m[2].split('').map(c=>SUP.indexOf(c)).join('')+'</sup> kg';}
 function hud(){if(frame%6)return;const bo=run.boss;$('bossbar').classList.toggle('hidden',!bo);
  if(bo){const ratio=bo.r/P.r,edible=bo.r<P.r*eatRatio();$('bossname').textContent=bo.boss.d.name;$('bossstate').textContent=bo.boss.left?'leaving':edible?'swallow it now':ratio.toFixed(1)+'× your size';$('bossf').style.transform='scaleX('+clamp(1-bo.boss.t/bo.boss.lim,0,1).toFixed(3)+')';}
- {const g=run.goal,G=run.gate;if(G){const live=run.chN&&simT-run.chT<CHAIN_T?run.chN:0;$('gtext').textContent=G.txt;$('gprog').textContent=G.gas?Math.min(99,Math.floor(gateProg(G,P.stage+1)*100))+'%':live+' of '+G.chain;}else{$('gtext').textContent=goalText(g);$('gprog').textContent=g?(g.done?'done':g.p+' of '+g.n):'';}$('goal').classList.toggle('done',!G&&!!(g&&g.done));$('goal').classList.toggle('gate',!!G);}
+ {const g=run.goal,G=run.gate;if(G){const live=run.chN&&simT-run.chT<chainT()?run.chN:0;$('gtext').textContent=G.txt;$('gprog').textContent=G.gas?Math.min(99,Math.floor(gateProg(G,P.stage+1)*100))+'%':live+' of '+G.chain;}else{$('gtext').textContent=goalText(g);$('gprog').textContent=g?(g.done?'done':g.p+' of '+g.n):'';}$('goal').classList.toggle('done',!G&&!!(g&&g.done));$('goal').classList.toggle('gate',!!G);}
  $('sname').textContent=STAGES[P.stage].n;$('cyc').textContent=(run.drift?'drift':'')+(run.drift&&run.cycle>1?' · ':'')+(run.cycle>1?'cycle '+run.cycle:'');$('snext').textContent=P.stage<LAST?STAGES[P.stage+1].n:'';$('smass').innerHTML=massHTML(P.r);
  const stg=Math.min(P.stage,LAST-1),rail=$('rail');
  if(railStage!==stg&&rail.querySelectorAll){if(!rail.querySelector('.tk'))for(let i=0;i<=LAST;i++){const t=document.createElement('span');t.className='tk';rail.insertBefore(t,rail.firstChild);}
@@ -1280,7 +1302,7 @@ function showTitle(){state='title';touch.on=false;$('hud').classList.add('hidden
 function newGame(){rec.dust=0;rec.up={};rec.skins=['classic'];rec.skin='classic';rec.game=(rec.game||1)+1;saveRec();clearSave();showTitle();toast('New game started');}
 function dateKey(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 function startRun(sv,daily,origin,drift){daily=false;run=freshRun();if(drift)run.drift=1;let r=R0;if(!sv&&origin){run.origin=origin;if(origin==='rogue')r=R0*1.33;}
- if(sv){Object.assign(run,sv.run);run.daily=null;run.pacts=run.pacts||[];run.relics=run.relics||[];run.syn=run.syn||[];if(run.rerolls==null)run.rerolls=0;run.gone=new Set(sv.run.gone||[]);run.laws=sv.run.laws||[];run.bossDone=run.bossDone||{};run.boss=null;run.cometT=rr(12,20);run.moonA=0;run.saveT=4;r=sv.r;}
+ if(sv){Object.assign(run,sv.run);run.daily=null;run.pacts=run.pacts||[];run.relics=run.relics||[];run.syn=run.syn||[];if(run.rerolls==null)run.rerolls=0;run.gone=new Set(sv.run.gone||[]);if(run.perks&&run.perks.armor){run.perks.tidal=Math.min(3,(run.perks.tidal||0)+run.perks.armor);delete run.perks.armor;}run.laws=sv.run.laws||[];run.bossDone=run.bossDone||{};run.boss=null;run.cometT=rr(12,20);run.moonA=0;run.saveT=4;r=sv.r;}
  else if(Q.get('stage'))r=R0*Math.pow(STEP,+Q.get('stage')+.05);
  P=newPlayer(r);if(sv)P.stage=sv.stage;shocks=[];evWarn=null;
  if(!sv){run.daily=daily?dateKey():null;run.seed=daily?hashStr('accrete-'+run.daily):(rand()*4294967296)>>>0;}
@@ -1296,7 +1318,7 @@ function startRun(sv,daily,origin,drift){daily=false;run=freshRun();if(drift)run
 function showOrigins(){const pool=ORIGINS.slice();const opts=[];while(opts.length<3){const i=(rand()*pool.length)|0;opts.push(pool.splice(i,1)[0]);}
  showOv('<div class="kick">Every universe starts somewhere</div><div class="psub">Choose your origin</div><div class="cards">'+opts.map(o=>'<button class="card in" data-o="'+o.id+'"><span class="gl">'+svgI(o.ic)+'</span><span><b>'+o.n+'</b><small>'+o.d+'</small></span></button>').join('')+'</div><button class="btn quiet gold" id="bBackO">Back</button>');
  ov.querySelectorAll('[data-o]').forEach(b=>b.addEventListener('click',()=>{audio();startRun(null,false,b.dataset.o);}));on('bBackO',showTitle);}
-var rollPerks=function(n){const pool=[],lw=RW.l+.012*P.stage;for(const k in PERKS){const p=PERKS[k];let w=PW[k]===undefined?1:PW[k];if(!w)continue;w*=p.r==='l'?lw*rareBoost():p.r==='r'?RW.r*rareBoost():RW.c;if(k==='crust'?run.shields>=3:lv(k)>=p.max)continue;pool.push([k,w]);}
+var rollPerks=function(n){const pool=[],lw=RW.l+.012*P.stage;for(const k in PERKS){const p=PERKS[k];let w=PW[k]===undefined?1:PW[k];if(!w)continue;w*=p.r==='l'?lw*rareBoost():p.r==='r'?RW.r*rareBoost():RW.c;if(k==='crust'?run.shields>=3:lv(k)>=p.max)continue;if(p.st&&(P.stage<p.st[0]||P.stage>p.st[1]))continue;if((k==='siphon'&&lv('edge'))||(k==='edge'&&lv('siphon')))continue;pool.push([k,w]);}
  const out=[];while(out.length<n&&pool.length){let tot=0;for(const q of pool)tot+=q[1];let x=rand()*tot,i=0;for(;i<pool.length-1;i++){x-=pool[i][1];if(x<=0)break;}out.push(pool[i][0]);pool.splice(i,1);}
  while(out.length<n)out.push('stardust');
  const freeP=Object.keys(PACTS).filter(k=>!pact(k));if(Q.get('pacts')&&P.stage>=2&&freeP.length&&rand()<.28)out[out.length-1]='pact:'+pick(rand,freeP);
@@ -1376,7 +1398,7 @@ else{
  setTimeout(checkBuild,1500);document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(checkBuild,800);});
  if(Q.has('demo'))startRun(null,false,Q.get('origin')||null,Q.has('drift'));else showTitle();
  if(Q.get('view')==='album')showAlbum(showTitle);if(Q.get('view')==='shop')showShop();
- if(Q.get('view')==='pick'){startRun(null);pendingPicks=1;setTimeout(showPick,900);}if(Q.get('view')==='pause'){startRun(null,false,'iron');run.perks={well:2,magnet:2,dash:1};run.pacts=['hunger'];run.relics=['king'];run.syn=['disk'];run.laws=['grav'];setTimeout(pause,1200);}if(Q.get('view')==='origins')showOrigins();if(Q.get('view')==='pickx'){startRun(null);P.stage=6;const rp=rollPerks;rollPerks=()=>['horizon','chain','pact:hunger'];pendingPicks=1;setTimeout(showPick,900);}if(Q.get('view')==='over'){startRun(null);setTimeout(()=>{run.eaten=231;run.time=412;killer='a rogue Moon';P.alive=false;state='dead';deathT=2;finishRun();showOver();},1200);}
+ if(Q.get('view')==='pick'){startRun(null);pendingPicks=1;setTimeout(showPick,900);}if(Q.get('view')==='pause'){startRun(null,false,'iron');run.perks={well:2,magnet:2,dash:1};run.pacts=['hunger'];run.relics=['king'];run.syn=['disk'];run.laws=['grav'];setTimeout(pause,1200);}if(Q.get('view')==='origins')showOrigins();if(Q.get('view')==='pickx'){startRun(null);P.stage=6;const rp=rollPerks;rollPerks=()=>Q.get('tiles')?Q.get('tiles').split(','):['horizon','chain','pact:hunger'];pendingPicks=1;setTimeout(showPick,900);}if(Q.get('view')==='over'){startRun(null);setTimeout(()=>{run.eaten=231;run.time=412;killer='a rogue Moon';P.alive=false;state='dead';deathT=2;finishRun();showOver();},1200);}
  requestAnimationFrame(t=>{last=t;loop(t);});}
 })();
 </script>
