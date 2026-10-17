@@ -24,7 +24,7 @@ svg.i{fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke
 button{font:inherit;color:inherit}
 button:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
 /* ---- HUD: an instrument, not a dashboard */
-#hud{position:fixed;left:0;right:0;top:0;pointer-events:none;padding:calc(env(safe-area-inset-top) + 14px) calc(env(safe-area-inset-right) + 18px) 0 calc(env(safe-area-inset-left) + 18px)}
+#hud{position:fixed;left:0;right:0;top:0;pointer-events:none;padding:calc(env(safe-area-inset-top) + 40px) calc(env(safe-area-inset-right) + 18px) 0 calc(env(safe-area-inset-left) + 18px)}
 #hud{text-shadow:none;-webkit-font-smoothing:antialiased}
 .hrow{display:flex;align-items:flex-start;gap:16px}
 .inst{flex:1;max-width:380px;min-width:0}
@@ -158,7 +158,7 @@ h2{font:600 clamp(40px,12vw,60px)/1 var(--serif);margin:6px 0 20px}
 const $=id=>document.getElementById(id);
 const cv=$('c'),ov=$('ov');let g=cv.getContext('2d');
 const Q=new URLSearchParams(location.search);
-const BUILD='2026-10-16.17';
+const BUILD='2026-10-16.18';
 let W=0,H=0,DPR=1;
 function resize(){DPR=Math.min(window.devicePixelRatio||1,3);let w=window.innerWidth,h=window.innerHeight;
  // iOS home-screen apps can report a viewport shorter than the screen (a black strip at the bottom): take the largest honest height
@@ -571,6 +571,13 @@ function atlasRing(x,y,R,al,n,rot,dash){g.strokeStyle='rgba('+GOLD+','+al+')';g.
 const SYL=['ka','ve','lo','mi','ra','sol','th','ar','en','is','or','ae','qu','ul','yn','dra','pho','cy','ne','tal','vor','eth','an','ri'],ROM=['I','II','III','IV','V','VI','VII','VIII'];
 function genName(id){const R=mulberry(hashStr(id)^SEED);let n='';const k=2+((R()*2)|0);for(let i=0;i<k;i++)n+=SYL[(R()*SYL.length)|0];return n[0].toUpperCase()+n.slice(1);}
 function bodyName(o){if(o.nm)return o.nm;const d=o.def;if(!d)return'';if(d.t==='star')o.nm=genName(d.s.id);else if(d.t==='pl')o.nm=genName(d.s.id)+' '+ROM[d.s.planets.indexOf(d.p)];else if(d.t==='mo')o.nm=genName(d.s.id)+' '+ROM[d.s.planets.indexOf(d.p)]+'abcd'[d.p.moons.indexOf(d.m)];else o.nm=genName(d.g.id);return o.nm;}
+function drawSilhouettes(z,ox,oy,t){if(!HOME||!run)return;const st=P.stage,base=szSt(st),C=base*48,VR=viewR(),tint=[9,11,22];
+ const x0=Math.floor((P.x-VR*1.3)/C),x1=Math.floor((P.x+VR*1.3)/C),y0=Math.floor((P.y-VR*1.3)/C),y1=Math.floor((P.y+VR*1.3)/C);if((x1-x0+1)*(y1-y0+1)>64)return;
+ for(let cx=x0;cx<=x1;cx++)for(let cy=y0;cy<=y1;cy++){const R=rngAt(31,st,cx,cy);if(R()>.7)continue;const ks=Math.min(16,st+2+((R()*3)|0)),k=STAGES[ks].k,v=(R()*6)|0,rad=base*(3.5+R()*9),
+   ph=R()*TAU,wob=base*(1+R()*2),wx=(cx+.15+.7*R())*C+Math.cos(t*.05+ph)*wob,wy=(cy+.15+.7*R())*C+Math.sin(t*.04+ph)*wob,x=wx*z+ox,y=wy*z+oy,rs=rad*z;
+   if(x+rs*1.3<0||x-rs*1.3>W||y+rs*1.3<0||y-rs*1.3>H)continue;const c=darkSprite(k,v,Math.min(192,Math.max(24,rs*DPR*.6)),tint,.9),dd=c.sz*rs/c.b;
+   g.save();g.translate(x,y);g.rotate(ph+t*.015*(R()<.5?-1:1));g.globalAlpha=.85;g.drawImage(c,-dd/2,-dd/2,dd,dd);g.restore();g.globalAlpha=1;
+   g.strokeStyle='rgba('+GOLD+',.09)';g.lineWidth=1;g.beginPath();g.arc(x,y,rs*1.04,0,TAU);g.stroke();}}
 function drawChart(z,ox,oy){if(!HOME)return;let cx,cy;if(lightSrc){cx=lightSrc.x;cy=lightSrc.y;}else{cx=HOME.gal.x;cy=HOME.gal.y;}
  const sx=cx*z+ox,sy=cy*z+oy,D=Math.hypot(sx-W/2,sy-H/2),diag=Math.hypot(W,H)/2;let step=Math.pow(2,Math.round(Math.log2(140/z)));const sp=step*z;
  const i0=Math.max(1,Math.floor((D-diag)/sp)),i1=Math.min(i0+60,Math.ceil((D+diag)/sp));g.lineWidth=1;
@@ -593,7 +600,7 @@ function drawSystems(z,ox,oy){for(const st of activeSys){const sx=st.x*z+ox,sy=s
 function drawCosmosBG(t){if(!HOME)return;const z=zoom,M=Math.max(W,H),gs=galaxiesNear(camX,camY,viewR()*2.2);
  if(P.stage>=11&&gs.length>1){g.globalCompositeOperation='lighter';g.strokeStyle='rgba(243,181,98,.12)';for(const a of gs){const ns=gs.filter(b=>b!==a).map(b=>[b,Math.hypot(b.x-a.x,b.y-a.y)]).filter(q=>q[1]<CGAL*2.4).sort((p1,p2)=>p1[1]-p2[1]).slice(0,2);for(const [b] of ns){if(b.id<a.id)continue;g.lineWidth=Math.max(1,Math.min(a.r,b.r)*z*.3);g.beginPath();g.moveTo((a.x-camX)*z+W/2,(a.y-camY)*z+H/2);g.lineTo((b.x-camX)*z+W/2,(b.y-camY)*z+H/2);g.stroke();}}g.globalCompositeOperation='source-over';}
  for(const gl of gs){if((run.gone&&run.gone.has(gl.id))||struct.has(gl.id))continue;const x=(gl.x-camX)*z+W/2,y=(gl.y-camY)*z+H/2,rs=gl.r*z;if(rs<1.5||rs>M*6||x+rs*1.2<0||x-rs*1.2>W||y+rs*1.2<0||y-rs*1.2>H)continue;
-  g.globalAlpha=rs<M*.1?.85:clamp(.55-rs/M*.1,.12,.45);g.globalCompositeOperation='lighter';const sp=getSprite('galaxy',gl.v,rs<M*.15?rs:60),dd=sp.size*rs/sp.b;g.save();g.translate(x,y);g.rotate(gl.a);g.drawImage(sp.c,-dd/2,-dd/2,dd,dd);g.restore();g.globalCompositeOperation='source-over';g.globalAlpha=1;}}
+  g.globalAlpha=rs<M*.1?.75:clamp(.3-rs/M*.06,.06,.22);g.globalCompositeOperation='lighter';const sp=getSprite('galaxy',gl.v,rs<M*.15?rs:60),dd=sp.size*rs/sp.b;g.save();g.translate(x,y);g.rotate(gl.a);g.drawImage(sp.c,-dd/2,-dd/2,dd,dd);g.restore();g.globalCompositeOperation='source-over';g.globalAlpha=1;}}
 const LIT={dwarf:1,moon:1,planet:1,super:1,gas:1,brown:1};
 function litAngle(o){return lightSrc&&LIT[o.k]&&!o.boss?Math.atan2(lightSrc.y-o.y,lightSrc.x-o.x)+Math.PI*.75:null;}
 let crumbs=[];
@@ -862,7 +869,7 @@ function updatePlayer(dt,auto){let ix=0,iy=0,im=0;
 
 // ---------- camera + background
 const STARS=[];for(let L=0;L<3;L++)for(let i=0;i<[90,50,22][L];i++)STARS.push({x:rand(),y:rand(),L,s:[.7,1.1,1.7][L]*rr(.6,1.2),b:rr(.3,1),tw:rand()*TAU});
-const SOFF=[[0,0],[0,0],[0,0],[0,0]],SF=[.04,.1,.22,1.5];
+const SOFF=[[0,0],[0,0],[0,0],[0,0]],SF=[.18,.34,.55,1.5];
 const BRIGHT=STARS.filter(st=>st.L===1).slice(0,14).map((st,i)=>{st.br=1;st.col=[[255,236,210],[200,220,255],[255,210,170],[230,230,255],[255,190,150]][i%5];return st;});
 const CONST=(()=>{const pool=STARS.filter(st=>st.L===1),used=new Set(),out=[];for(let c=0;c<5&&pool.length;c++){let cur=pool[(c*7)%pool.length];if(used.has(cur))continue;const chain=[cur];used.add(cur);for(let k=0;k<4;k++){let best=null,bd=1e9;for(const q of pool){if(used.has(q))continue;const d=Math.hypot(q.x-cur.x,(q.y-cur.y)*1.8);if(d<bd&&d<.22){bd=d;best=q;}}if(!best)break;chain.push(best);used.add(best);cur=best;}if(chain.length>=3)out.push(chain);}return out;})();
 const MOTES=[];for(let i=0;i<26;i++)MOTES.push({x:rand(),y:rand(),s:rr(1.5,4),b:rr(.05,.16)});
@@ -917,7 +924,7 @@ function render(t){
  g.setTransform(DPR,0,0,DPR,0,0);g.imageSmoothingQuality='high';drawBG(t);
  g.save();if(shake>0){g.translate((rand()-.5)*shake*18,(rand()-.5)*shake*18);}
  const z=zoom,ox=W/2-camX*z,oy=H/2-camY*z,pr=P.r,er=eatRatio(),playing=(state==='play'||state==='pick'||state==='paused')&&P.alive;
- drawChart(z,ox,oy);drawSystems(z,ox,oy);
+ drawSilhouettes(z,ox,oy,t);drawChart(z,ox,oy);drawSystems(z,ox,oy);
  g.lineWidth=1;for(const o of objs){if(!o.host||o.eat>=0)continue;const h=o.host,hx=h.x*z+ox,hy=h.y*z+oy,R1=o.orbR*z;if(hx+R1<0||hx-R1>W||hy+R1<0||hy-R1>H||R1<6)continue;atlasRing(hx,hy,R1,.2,R1>60?36:0,0,o.decay>0);}
  if(playing)for(const o of objs){if(o.eat>=0||o.com||o.gal||!(o.r*EAT0>pr)||o.r<pr*eatFor(o))continue;const rg=o.r+Math.min(o.r*((o.pullR||3.6)-1),pr*10),d=Math.hypot(o.x-P.x,o.y-P.y);if(d>rg)continue;const x=o.x*z+ox,y=o.y*z+oy;g.strokeStyle='rgba(255,90,90,'+(.28*clamp(1-d/rg+.2,0,1))+')';g.setLineDash([6,8]);g.lineWidth=1.5;g.beginPath();g.arc(x,y,rg*z,0,TAU);g.stroke();g.setLineDash([]);}
  drawCrumbs(z,ox,oy,t);drawAnoms(z,ox,oy,t);
