@@ -184,6 +184,7 @@ h2{font:600 clamp(40px,12vw,60px)/1 var(--serif);margin:6px 0 20px}
 </style>
 </head>
 <body>
+<div id="safeprobe" style="position:fixed;top:0;left:0;width:1px;height:env(safe-area-inset-top);visibility:hidden;pointer-events:none"></div>
 <div id="vprobe" style="position:fixed;left:0;top:0;width:1px;height:100vh;height:100lvh;visibility:hidden;pointer-events:none"></div>
 <canvas id="c"></canvas>
 <div id="hud" class="hidden">
@@ -207,7 +208,7 @@ h2{font:600 clamp(40px,12vw,60px)/1 var(--serif);margin:6px 0 20px}
 const $=id=>document.getElementById(id);
 const cv=$('c'),ov=$('ov');let g=cv.getContext('2d');
 const Q=new URLSearchParams(location.search);
-const BUILD='2026-10-17.36';
+const BUILD='2026-10-17.37';
 let W=0,H=0,DPR=1;
 function resize(){DPR=Math.min(window.devicePixelRatio||1,3);let w=window.innerWidth,h=window.innerHeight;
  // iOS home-screen apps can report a viewport shorter than the screen (a black strip at the bottom): take the largest honest height
@@ -1224,12 +1225,12 @@ function drawWarnings(z,ox,oy){if(state!=='play'||!P.alive)return;const VR=viewR
 let mapLevel='here',warp=null;
 const MAPN={here:'Around you',system:'System',galaxy:'Galaxy',web:'Cosmic web'};
 function nearestSys(){if(!HOME)return null;let b=HOME.sys,bd=Math.hypot(P.x-b.x,P.y-b.y);for(const st of activeSys){const d=Math.hypot(P.x-st.x,P.y-st.y);if(d<bd){bd=d;b=st;}}return b;}
-function mapLevels(){const L=['here'];if(P.stage<=11)L.push('system');if(P.stage>=8)L.push('galaxy');if(P.stage>=12)L.push('web');return L;}
+function mapLevels(){const L=['here'];if(P.stage<=11)L.push('system');L.push('galaxy','web');return L;}
 // distances: a solar system's edge is ~30 AU; a galaxy's radius ~50,000 light-years
 function distText(d,useLy){if(HOME&&!useLy){const au=d/HOME.sys.outer*30;return au<.1?Math.round(au*1.496e8).toLocaleString()+' km':(au<10?au.toFixed(1):Math.round(au))+' AU';}const ly=d/(HOME?HOME.gal.r:1)*5e4;return ly<1e6?Math.round(ly).toLocaleString()+' light-years':(ly/1e6).toFixed(1)+' million light-years';}
 function mapFrame(level){if(level==='system'){const st=nearestSys();return{level,cx:st.x,cy:st.y,R:st.outer*1.2,title:genName(st.id)+(st.id==='SH'?', home':'')};}
  if(level==='galaxy'){const gl=galaxyAt(P.x,P.y)||HOME.gal;return{level,cx:gl.x,cy:gl.y,R:gl.r*1.15,title:genName(gl.id)+(gl.id==='GH'?', home galaxy':' galaxy')};}
- if(level==='web')return{level,cx:P.x,cy:P.y,R:CGAL*3,title:'The cosmic web'};return{level:'here',cx:P.x,cy:P.y,R:viewR()*4,title:'Around you'};}
+ if(level==='web')return{level,cx:P.x,cy:P.y,R:CGAL*3,title:'The cosmic web'};return{level:'here',cx:P.x,cy:P.y,R:viewR()*1.6,title:'Around you'};}
 function mapSystem(st,X,Y,sc,t){const sx=X(st.x),sy=Y(st.y);g.lineWidth=1;
  for(const p of st.planets){const R=p.orb*sc;if(R<3)continue;g.strokeStyle='rgba('+GOLD+',.22)';g.beginPath();g.arc(sx,sy,R,0,TAU);g.stroke();}
  if(st.belt&&st.belt.a*sc>4){g.strokeStyle='rgba(159,216,255,.5)';g.setLineDash([2,4]);g.beginPath();g.arc(sx,sy,st.belt.a*sc,0,TAU);g.stroke();g.setLineDash([]);}
@@ -1237,7 +1238,8 @@ function mapSystem(st,X,Y,sc,t){const sx=X(st.x),sy=Y(st.y);g.lineWidth=1;
  st.planets.forEach((p,i)=>{const q=planetPos(st,p),x=X(q.x),y=Y(q.y),r=Math.max(2.2,p.r*sc),gn=run.gone.has(p.id),col=p.gas?hex(GAS[p.v%GAS.length][0]):PLAN[p.v%PLAN.length].atm;g.fillStyle=rgba(col,gn?0:.95);g.strokeStyle=rgba(col,.9);g.beginPath();g.arc(x,y,r,0,TAU);gn?g.stroke():g.fill();if(p.ring&&!gn){g.strokeStyle=rgba(col,.6);g.beginPath();g.arc(x,y,r*1.8,0,TAU);g.stroke();}});}
 function mapGalaxy(gl,X,Y,sc){const rs=gl.r*sc;if(rs>3&&rs<260){g.globalAlpha=.75;g.save();g.translate(X(gl.x),Y(gl.y));g.rotate(gl.a);KINDS.galaxy.draw(g,rs,mulberry(hashStr('galaxy')+gl.v*7919),gl.v);g.restore();g.globalCompositeOperation='source-over';g.globalAlpha=1;}}
 function mapLabel(x,y,txt,col){g.font='italic 600 14px Cormorant, Georgia, serif';g.textAlign='left';g.fillStyle='rgba('+(col||GOLD)+',.9)';g.fillText(txt,Math.round(x+8),Math.round(y-6));}
-function drawMap(fr,t,hideYou){const Rp=Math.min(W,H)*.4,cx=W/2,cy=H*.46,sc=Rp/fr.R,X=x=>cx+(x-fr.cx)*sc,Y=y=>cy+(y-fr.cy)*sc;
+const safeTop=()=>{const e=$('safeprobe');return e?e.getBoundingClientRect().height||0:0;};
+function drawMap(fr,t,hideYou){const ty=Math.max(64,safeTop()+74),Rp=Math.min(W*.42,H*.4,(H-ty-230)/2.3),cx=W/2,cy=Math.max(H*.46,ty+34+Rp*1.1),sc=Rp/fr.R,X=x=>cx+(x-fr.cx)*sc,Y=y=>cy+(y-fr.cy)*sc;
  g.fillStyle='rgba(4,5,12,.96)';g.fillRect(0,0,W,H);g.lineWidth=1;
  for(let i=1;i<=4;i++){g.strokeStyle='rgba('+GOLD+','+(i===4?.28:.1)+')';g.beginPath();g.arc(cx,cy,Rp*i/4,0,TAU);g.stroke();}
  g.strokeStyle='rgba('+GOLD+',.07)';g.beginPath();for(let k=0;k<24;k++){const a=k*TAU/24;g.moveTo(cx+Math.cos(a)*Rp*.25,cy+Math.sin(a)*Rp*.25);g.lineTo(cx+Math.cos(a)*Rp*1.1,cy+Math.sin(a)*Rp*1.1);}g.stroke();atlasRing(cx,cy,Rp*1.1,.25,72,0,false);
@@ -1245,20 +1247,21 @@ function drawMap(fr,t,hideYou){const Rp=Math.min(W,H)*.4,cx=W/2,cy=H*.46,sc=Rp/f
  const L=fr.level;
  if(L==='web'||L==='galaxy'||(L==='warp'&&fr.R>HOME.gal.r*.4)){const gs=galaxiesNear(fr.cx,fr.cy,fr.R*1.2);if(L!=='galaxy'||fr.R>HOME.gal.r*4){g.strokeStyle='rgba('+GOLD+',.16)';for(const a of gs){const ns=gs.filter(b=>b!==a).map(b=>[b,Math.hypot(b.x-a.x,b.y-a.y)]).filter(q=>q[1]<CGAL*2.4).sort((p1,p2)=>p1[1]-p2[1]).slice(0,2);for(const [b] of ns){if(b.id<a.id)continue;g.beginPath();g.moveTo(X(a.x),Y(a.y));g.lineTo(X(b.x),Y(b.y));g.stroke();}}}
   for(const gl of gs){mapGalaxy(gl,X,Y,sc);if(gl.r*sc<3){g.fillStyle=run.seen&&run.seen.has(gl.id)?'rgba('+GOLD+',.95)':'rgba(205,180,255,.55)';g.beginPath();g.arc(X(gl.x),Y(gl.y),2,0,TAU);g.fill();}if(run.seen&&run.seen.has(gl.id)||gl.id==='GH')mapLabel(X(gl.x)+gl.r*sc*.7,Y(gl.y)-gl.r*sc*.7,genName(gl.id));}
-  if(HOME&&!run.gone.has('BH0')&&P.stage>=10){const x=X(HOME.smbh.x),y=Y(HOME.smbh.y);g.fillStyle='#000';g.strokeStyle='rgba(255,205,130,.9)';g.beginPath();g.arc(x,y,4,0,TAU);g.fill();g.stroke();mapLabel(x+2,y+18,'Core');}
+  if(HOME&&!run.gone.has('BH0')){const x=X(HOME.smbh.x),y=Y(HOME.smbh.y);g.fillStyle='#000';g.strokeStyle='rgba(255,205,130,.9)';g.beginPath();g.arc(x,y,4,0,TAU);g.fill();g.stroke();mapLabel(x+2,y+18,'Core');}
   for(const id in (run.seenPos||{})){const q=run.seenPos[id];if(q[2]!==1)continue;const x=X(q[0]),y=Y(q[1]);g.fillStyle=id==='SH'?'rgba(255,226,160,1)':'rgba('+GOLD+',.8)';g.beginPath();g.arc(x,y,id==='SH'?3.2:2,0,TAU);g.fill();if(id==='SH')mapLabel(x,y,'Home');}}
  if(L==='system'||L==='warp'){for(const st of (L==='warp'?activeSys.concat(HOME.sys):[nearestSys()]))if(st.outer*sc>8)mapSystem(st,X,Y,sc,t);if(L==='system'){const st=nearestSys();st.planets.forEach((p,i)=>{if(p.orb*sc>36&&!run.gone.has(p.id)){const q=planetPos(st,p);mapLabel(X(q.x),Y(q.y),genName(st.id)+' '+ROM[i],'242,238,227');}});}}
  if(L==='here'){for(const o of objs){if(o.dead||o.eat>=0)continue;const x=X(o.x),y=Y(o.y),r=Math.max(1.3,o.r*sc);if(x<-r||x>W+r||y<-r||y>H+r)continue;const thr=o.r*EAT0>P.r&&o.r>=P.r*eatFor(o);
-   if(thr){g.strokeStyle='rgba(255,96,80,.85)';g.beginPath();g.arc(x,y,r,0,TAU);g.stroke();}else{g.fillStyle=o.gold?'rgba(255,226,160,1)':rgba(KCOL[o.k]||[200,200,200],.75);g.beginPath();g.arc(x,y,r,0,TAU);g.fill();}
+   if(o.r*sc>=2.5)drawBody(o.k,o.v,x,y,o.r*sc,o.a,litAngle(o));else{g.fillStyle=o.gold?'rgba(255,226,160,1)':rgba(KCOL[o.k]||[200,200,200],.8);g.beginPath();g.arc(x,y,r,0,TAU);g.fill();}
+   if(thr){g.strokeStyle='rgba(255,96,80,.85)';g.lineWidth=1;g.beginPath();g.arc(x,y,r+1.5,0,TAU);g.stroke();}
    if(run.gate&&run.gate.gas&&!thr&&gasShare(o)>.5){g.strokeStyle='rgba(159,216,255,.85)';g.beginPath();g.arc(x,y,r+3,0,TAU);g.stroke();}}
   for(const an of anoms){const ro=ANROLE[an.t];if(!ro&&an.t!=='string'&&an.t!=='grb')continue;g.strokeStyle=ro>0?'rgba(159,216,255,.85)':'rgba(255,96,80,.85)';g.setLineDash([2,3]);g.beginPath();g.arc(X(an.x),Y(an.y),Math.max(5,an.r*sc),0,TAU);g.stroke();g.setLineDash([]);}}
  if(run.trail&&run.trail.length){g.strokeStyle='rgba('+GOLD+',.7)';g.lineWidth=1.3;g.beginPath();run.trail.forEach((q,i)=>{const x=X(q[0]),y=Y(q[1]);i?g.lineTo(x,y):g.moveTo(x,y);});if(!hideYou)g.lineTo(X(P.x),Y(P.y));g.stroke();g.lineWidth=1;}
  g.setLineDash([3,4]);g.strokeStyle='rgba(159,216,255,.6)';for(const j of run.jumps||[]){if(warp&&j===run.jumps[run.jumps.length-1])continue;const a=[X(j[0]),Y(j[1])],b=[X(j[2]),Y(j[3])],mx=(a[0]+b[0])/2-(b[1]-a[1])*.25,my=(a[1]+b[1])/2+(b[0]-a[0])*.25;g.beginPath();g.moveTo(a[0],a[1]);g.quadraticCurveTo(mx,my,b[0],b[1]);g.stroke();}g.setLineDash([]);
  if(!hideYou){const px=X(P.x),py=Y(P.y),pu=1+.25*Math.sin(t*4);g.strokeStyle='rgba(255,226,160,.9)';g.beginPath();g.arc(px,py,7*pu,0,TAU);g.stroke();g.fillStyle='#fff2d6';g.beginPath();g.arc(px,py,3,0,TAU);g.fill();}
  g.restore();
- const top=Math.max(64,H*.09);g.textAlign='center';g.fillStyle='#f2eee3';g.font='600 30px Cormorant, Georgia, serif';g.fillText(fr.title,Math.round(W/2),Math.round(top));
+ g.textAlign='center';g.fillStyle='#f2eee3';g.font='600 30px Cormorant, Georgia, serif';g.fillText(fr.title,Math.round(W/2),Math.round(ty));
  // scale bar: 90 px (a wormhole jump shows its distance instead)
- if(L==='warp')return{X,Y,sc};
+ if(L==='warp')return{X,Y,sc,by:Math.round(cy+Rp*1.1+26)};
  const bw=90,bx=Math.round(W/2-bw/2),by=Math.round(cy+Rp*1.1+26);g.strokeStyle='rgba('+GOLD+',.8)';g.beginPath();g.moveTo(bx,by+.5);g.lineTo(bx+bw,by+.5);g.moveTo(bx+.5,by-4);g.lineTo(bx+.5,by+5);g.moveTo(bx+bw-.5,by-4);g.lineTo(bx+bw-.5,by+5);g.stroke();
  g.font='italic 500 15px Cormorant, Georgia, serif';g.fillStyle='rgba(140,147,184,.95)';g.fillText(L==='here'?fmtLen(bw/sc*realD(P.r)/(2*P.r)):distText(bw/sc,L==='galaxy'||L==='web'||(L==='warp'&&fr.ly)),Math.round(W/2),by+20);
  return{X,Y,sc};}
@@ -1277,7 +1280,7 @@ function endWarp(){warp=null;state='play';$('hud').classList.remove('hidden');P.
 function drawWarp(t){const w=warp,m=drawMapCached(w.fr,'w'+w.x0+','+w.y0,t),a=[m.X(w.x0),m.Y(w.y0)],b=[m.X(w.x1),m.Y(w.y1)],cx=(a[0]+b[0])/2-(b[1]-a[1])*.25,cy=(a[1]+b[1])/2+(b[0]-a[0])*.25,k=clamp(w.t/1.1,0,1),e=1-Math.pow(1-k,3),N=48;
  g.strokeStyle='rgba(255,226,160,.95)';g.lineWidth=1.6;g.beginPath();let hx=a[0],hy=a[1];for(let i=0;i<=N*e;i++){const u=i/N,x=(1-u)*(1-u)*a[0]+2*u*(1-u)*cx+u*u*b[0],y=(1-u)*(1-u)*a[1]+2*u*(1-u)*cy+u*u*b[1];i?g.lineTo(x,y):g.moveTo(x,y);hx=x;hy=y;}g.stroke();g.lineWidth=1;
  g.strokeStyle='rgba(159,216,255,.9)';g.beginPath();g.arc(a[0],a[1],6,0,TAU);g.stroke();g.fillStyle='#fff2d6';g.beginPath();g.arc(hx,hy,3.2,0,TAU);g.fill();
- if(k>=1){const al=clamp((w.t-1.1)/.3,0,1);g.globalAlpha=al;g.strokeStyle='rgba(255,226,160,.9)';g.beginPath();g.arc(b[0],b[1],8+2*Math.sin(t*5),0,TAU);g.stroke();g.textAlign='center';g.font='italic 600 22px Cormorant, Georgia, serif';g.fillStyle='rgba('+GOLD+',1)';g.fillText(distText(w.d,w.ly),Math.round(W/2),Math.round(H*.46+Math.min(W,H)*.4*1.1+62));g.globalAlpha=1;}}
+ if(k>=1){const al=clamp((w.t-1.1)/.3,0,1);g.globalAlpha=al;g.strokeStyle='rgba(255,226,160,.9)';g.beginPath();g.arc(b[0],b[1],8+2*Math.sin(t*5),0,TAU);g.stroke();g.textAlign='center';g.font='italic 600 22px Cormorant, Georgia, serif';g.fillStyle='rgba('+GOLD+',1)';g.fillText(distText(w.d,w.ly),Math.round(W/2),Math.round(m.by+20));g.globalAlpha=1;}}
 function wormTarget(){const st=nearestSys(),opts=[];
  if(P.stage<=11&&st){if(st.belt)opts.push(()=>{const a=rand()*TAU;return[st.x+Math.cos(a)*st.belt.a,st.y+Math.sin(a)*st.belt.a];});for(const p of st.planets){if(run.gone.has(p.id))continue;opts.push(()=>{const q=planetPos(st,p),a=rand()*TAU,dd=p.r*(p.ring?1.6:2.4)+P.r*16;return[q.x+Math.cos(a)*dd,q.y+Math.sin(a)*dd];});}
   if(P.stage>=7)for(const o of activeSys)if(o!==st)opts.push(()=>{const a=rand()*TAU,dd=o.outer*rr(.3,.8);return[o.x+Math.cos(a)*dd,o.y+Math.sin(a)*dd];});if(opts.length)return pick(rand,opts)();}
