@@ -97,7 +97,7 @@ h2{font:600 clamp(40px,12vw,60px)/1 var(--serif);margin:6px 0 20px}
 .stats span{font:italic 500 16px var(--serif);color:var(--dust)}
 .nb{display:inline-flex;align-items:center;gap:7px;font:600 15px var(--sans);color:var(--gold);margin:2px 0 14px}
 .nb svg{width:16px;height:16px}
-.album{width:min(580px,94vw);max-height:62vh;overflow-y:auto;-webkit-overflow-scrolling:touch;display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin:4px 0 16px;text-align:center}
+.album{width:min(580px,100%);max-height:62vh;overflow-y:auto;-webkit-overflow-scrolling:touch;display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin:4px 0 16px;text-align:center}
 .ac{background:var(--glass);border:1px solid var(--line);border-radius:14px;padding:12px 10px}
 .ac canvas{width:64px;height:64px}
 .ac b{display:block;font:600 18px/1.1 var(--serif);margin-top:6px}
@@ -105,7 +105,7 @@ h2{font:600 clamp(40px,12vw,60px)/1 var(--serif);margin:6px 0 20px}
 .ac i{display:block;font:500 11px var(--sans);color:var(--dust);opacity:.75;margin-top:6px;font-style:normal;font-variant-numeric:tabular-nums}
 .ac.lock{opacity:.45}
 .ac.trophy{border-color:rgba(243,181,98,.55)}
-.shop{width:min(460px,94vw);max-height:60vh;overflow-y:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;gap:9px;margin:4px 0 16px;text-align:left}
+.shop{width:min(460px,100%);max-height:60vh;overflow-y:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;gap:9px;margin:4px 0 16px;text-align:left}
 .row{display:flex;align-items:center;gap:14px;background:var(--glass);border:1px solid var(--line);border-radius:14px;padding:13px 14px}
 .row .ic{flex:none;width:40px;height:40px;border-radius:50%;display:grid;place-items:center;color:var(--gold);border:1px solid rgba(243,181,98,.4)}
 .row b{display:block;font:600 18px/1.1 var(--serif)}
@@ -199,7 +199,7 @@ h2{font:600 clamp(40px,12vw,60px)/1 var(--serif);margin:6px 0 20px}
 const $=id=>document.getElementById(id);
 const cv=$('c'),ov=$('ov');let g=cv.getContext('2d');
 const Q=new URLSearchParams(location.search);
-const BUILD='2026-10-17.31';
+const BUILD='2026-10-17.33';
 let W=0,H=0,DPR=1;
 function resize(){DPR=Math.min(window.devicePixelRatio||1,3);let w=window.innerWidth,h=window.innerHeight;
  // iOS home-screen apps can report a viewport shorter than the screen (a black strip at the bottom): take the largest honest height
@@ -278,10 +278,11 @@ const PERKS={
  dhalo:{r:'r',n:'Dark Halo',d:'Bigger bodies near you move 25% slower',max:2},
  seed:{r:'l',n:'Supernova Seed',d:'When a shield breaks you blast everything nearby apart',max:1},
  siphon:{r:'l',n:'Tidal Siphon',d:'Tides feed you instead of tearing you apart',max:1},
+ prosp:{r:'r',n:'Prospector',d:'Golden bodies turn up twice as often and are worth half as much again',max:2},
  momentum:{n:'Momentum',d:'Gain up to 15% more mass per level while moving fast',max:2,r:'r'},
 };
 const PW={stardust:0,dash:0};
-const SN={well:'Wider Pull',magnet:'Stronger Pull',dense:'Bigger Bites',thrust:'Faster',feast:'More Mass',crust:'Shield',tidal:'Steady',moonlet:'Moon',rich:'More Debris',lens:'See Farther',phoenix:'Extra Life',stardust:'Mass Boost',horizon:'Instant Swallow',binary:'Twin World',chain:'Shockwave',momentum:'Momentum',shatter:'Smash',scav:'Scraps',regolith:'Dust Magnet',ballet:'Orbiters',assist:'Slingshot',armor:'Tough Skin',instinct:'Hunter',spiral:'Dust Burst',lucky:'Lucky',dhalo:'Slow Field',seed:'Nova Shield',siphon:'Tide Feeder'};
+const SN={prosp:'Prospector',well:'Wider Pull',magnet:'Stronger Pull',dense:'Bigger Bites',thrust:'Faster',feast:'More Mass',crust:'Shield',tidal:'Steady',moonlet:'Moon',rich:'More Debris',lens:'See Farther',phoenix:'Extra Life',stardust:'Mass Boost',horizon:'Instant Swallow',binary:'Twin World',chain:'Shockwave',momentum:'Momentum',shatter:'Smash',scav:'Scraps',regolith:'Dust Magnet',ballet:'Orbiters',assist:'Slingshot',armor:'Tough Skin',instinct:'Hunter',spiral:'Dust Burst',lucky:'Lucky',dhalo:'Slow Field',seed:'Nova Shield',siphon:'Tide Feeder'};
 const PSN={hunger:'Hunger',glass:'Glass Core',void:'Hunted',haste:'Haste',swarm:'Swarm',weight:'Heavy'};
 const RW={c:1,r:.42,l:.09};const rareBoost=()=>1+.5*(run?lv('lucky'):0);
 const PACTS={
@@ -309,8 +310,6 @@ const hasLaw=k=>!!(run&&run.laws&&run.laws.includes(k));
 const UPS=[
  {id:'shield',i:'🛡️',n:'Thicker Crust',d:'Start every run with one more shield',cost:[120,300],},
  {id:'start',i:'🧬',n:'Primordial Gift',d:'Pick a free evolution at the start of every run',cost:[200]},
- {id:'picks',i:'🃏',n:'Wider Choice',d:'Four evolutions to choose from at each stage instead of three',cost:[450]},
- {id:'magnet',i:'✨',n:'Stardust Magnet',d:'Earn 25% more stardust per level',cost:[150,350,700]},
 ];
 const SKINS=[
  {id:'classic',n:'Classic',col:null,cost:0},
@@ -529,7 +528,7 @@ function drawVec(k,v,x,y,rs,a,lit){const Kd=KINDS[k],la=(lit!=null?lit:(Kd.rot&&
 const LS='accrete.v1',SV='accrete.run.v1';
 let rec={best:-1,bestName:'',bestCycle:1,runs:0,eaten:0,bangs:0,muted:false,music:true,codex:{},dust:0,up:{},skins:['classic'],skin:'classic'};
 try{Object.assign(rec,JSON.parse(localStorage.getItem(LS)||'{}'));}catch(e){}
-if(!rec.codex)rec.codex={};if(!rec.up)rec.up={};if(!rec.skins)rec.skins=['classic'];if(rec.dust==null)rec.dust=0;
+if(!rec.codex)rec.codex={};{let rf=0;if(rec.up&&rec.up.picks){rf+=450;delete rec.up.picks;}if(rec.up&&rec.up.magnet){rf+=[0,150,500,1200][Math.min(3,rec.up.magnet)];delete rec.up.magnet;}if(rf){rec.dust=(rec.dust||0)+rf;try{localStorage.setItem(LS,JSON.stringify(rec));}catch(e){}}}if(!rec.up)rec.up={};if(!rec.skins)rec.skins=['classic'];if(rec.dust==null)rec.dust=0;
 const saveRec=()=>{try{localStorage.setItem(LS,JSON.stringify(rec));}catch(e){}};
 const loadSave=()=>{try{return JSON.parse(localStorage.getItem(SV)||'null');}catch(e){return null;}};
 const clearSave=()=>{try{localStorage.removeItem(SV);}catch(e){}};
@@ -569,7 +568,7 @@ function spawnBody(x,y,r,z){z=z||{t:'space'};
  if((z.t==='disk'||P.stage>=10)&&P.stage>=9&&P.stage<=12&&rand()<.07){const o=makeObj(x,y,P.r*rr(.08,.3));o.k='wdwarf';objs.push(o);return 1;}
  if(P.stage>=12&&P.stage<=15&&rand()<.06){const o=makeObj(x,y,P.r*rr(.3,1.6));o.k='globular';o.sp=rr(-.05,.05);objs.push(o);return 1;}
  if(z.t==='ring'&&r>P.r*.6&&rand()<.7)r*=.35;
- const o=makeObj(x,y,r);objs.push(o);let n=1;if(r<P.r*.7&&!run.attract&&rand()<(GOLDQ?.15:.006))o.gold=1;
+ const o=makeObj(x,y,r);objs.push(o);let n=1;if(r<P.r*.7&&!run.attract&&rand()<(GOLDQ?.15:.006*(1+lv('prosp'))))o.gold=1;
  if((z.t==='ring'||(z.t==='oort'&&rand()<.5))&&stageOf(r)<=4)o.k='ice';
  if(z.hx!=null){const dx=x-z.hx,dy=y-z.hy,d=Math.hypot(dx,dy)||1,sp=P.r*(z.t==='ring'?rr(.25,.45):rr(.12,.3))*z.dir;o.vx=z.hvx-dy/d*sp+rr(-.05,.05)*P.r;o.vy=z.hvy+dx/d*sp+rr(-.05,.05)*P.r;}
  if(z.t==='void'&&z.w.node){const dx=z.w.node[0]-x,dy=z.w.node[1]-y,d=Math.hypot(dx,dy)||1;o.vx+=dx/d*P.r*.5;o.vy+=dy/d*P.r*.5;}
@@ -821,7 +820,7 @@ function hitPlayer(o){
  burst(P.x,P.y,STAGES[P.stage].k,40);shake=1.2;deathSound();clearSave();finishRun();}
 // Drift: anything that would swallow you only knocks you away and takes a little mass
 function driftHit(o){if(P.inv>0)return;const dx=P.x-o.x,dy=P.y-o.y,d=Math.hypot(dx,dy)||1;spray(P.x-dx/d*P.r,P.y-dy/d*P.r,Math.atan2(-dy,-dx),M3(P.r)*.12,P,P.vx,P.vy);P.r*=Math.sqrt(.92);checkStage();P.inv=2.2;P.vx=dx/d*P.r*12+(o.vx||0);P.vy=dy/d*P.r*12+(o.vy||0);shake=.5;thud();rings.push({ref:P,r0:1,r1:2.4,t:0,m:.5,col:[159,216,255],w:2});}
-function finishRun(){const best=Math.max(P.stage,run.maxStage||0);run.dustEarned=(run.bonusDust||0)+(org('glass')?2:1)*Math.round((Math.floor(run.eaten/4)+best*10+(run.cycle-1)*100+(run.bossWins||0)*30)*(1+.25*ul('magnet')));rec.dust+=run.dustEarned;const score=(run.cycle-1)*LAST+best;newBest=!run.drift&&score>rec.best;if(newBest){rec.best=score;rec.bestName=STAGES[best].n;rec.bestCycle=run.cycle;}rec.runs++;rec.eaten+=run.eaten;if(run.daily){const sc=score;if(!rec.daily||rec.daily.d!==run.daily||sc>rec.daily.s)rec.daily={d:run.daily,s:sc,n:STAGES[best].n};}saveRec();}
+function finishRun(){const best=Math.max(P.stage,run.maxStage||0);run.dustEarned=(run.bonusDust||0)+(org('glass')?2:1)*Math.round((Math.floor(run.eaten/4)+best*10+(run.cycle-1)*100+(run.bossWins||0)*30));rec.dust+=run.dustEarned;const score=(run.cycle-1)*LAST+best;newBest=!run.drift&&score>rec.best;if(newBest){rec.best=score;rec.bestName=STAGES[best].n;rec.bestCycle=run.cycle;}rec.runs++;rec.eaten+=run.eaten;if(run.daily){const sc=score;if(!rec.daily||rec.daily.d!==run.daily||sc>rec.daily.s)rec.daily={d:run.daily,s:sc,n:STAGES[best].n};}saveRec();}
 function startFinale(){if(run.fin)return;run.fin={t:0,n:0};P.inv=99;pendingPicks=0;banner={t:0,txt:'Universe',sub:'Now swallow everything.'};rings.push({ref:P,wheel:1,r0:1,r1:1,t:0,m:2.4,col:[243,181,98],w:1});chime();tone(55,4,'sine',.3,110);}
 const FIN_T=5.5;
 function finaleStep(dt){const f=run.fin;f.t+=dt;P.inv=99;const VR=viewR(),k=clamp(f.t/FIN_T,0,1),hz=P.r+(VR*1.6)*(1-k*k);f.hz=hz;let n=0;
@@ -930,7 +929,7 @@ function gasShare(o){if(o.gs!=null)return o.gs;if(o.neb||o.k==='nebula')return 1
 function grow(m,gs){if(!(m>0))return;const M=M3(P.r);run.gasF=((run.gasF||0)*M+gs*m)/(M+m);run.gasM=(run.gasM||0)+gs*m;P.r=R3(M+m);}
 // ---------- golden bodies: rare glinting debris, worth stardust when you swallow it
 let floaters=[];
-function goldFound(o){discover('gold');const d=2+Math.floor(P.stage/3)+2*(run.cycle-1);run.bonusDust=(run.bonusDust||0)+d;run.golds=(run.golds||0)+1;floaters.push({x:o.x,y:o.y,t:0,txt:'+'+d});rings.push({ref:P,r0:1,r1:3.2,t:0,m:.6,col:[243,181,98],w:2});
+function goldFound(o){discover('gold');const d=Math.round((2+Math.floor(P.stage/3)+2*(run.cycle-1))*(1+.5*lv('prosp')));run.bonusDust=(run.bonusDust||0)+d;run.golds=(run.golds||0)+1;floaters.push({x:o.x,y:o.y,t:0,txt:'+'+d});rings.push({ref:P,r0:1,r1:3.2,t:0,m:.6,col:[243,181,98],w:2});
  if(AC&&!rec.muted)[0,4,7,12,16].forEach((q,i)=>tone(988*Math.pow(2,q/12),.35,'triangle',.07,0,i*.05));if(!rec.goldTip){rec.goldTip=1;saveRec();toast('Golden bodies are worth stardust');}}
 function glint(x,y,rs,t,id){const tw=.6+.4*Math.sin(t*4+id),s=Math.max(9,rs*.9),px=x+rs*.55,py=y-rs*.55,gr=Math.max(10,rs*2.2);
  g.globalCompositeOperation='lighter';g.fillStyle=radial(g,x,y,rs*.6,x,y,gr,[[0,'rgba(243,181,98,'+(.22*tw).toFixed(3)+')'],[1,'rgba(243,181,98,0)']]);g.fillRect(x-gr,y-gr,gr*2,gr*2);g.globalCompositeOperation='source-over';
@@ -1211,6 +1210,7 @@ const ICONS={
  dhalo:'<circle cx="12" cy="12" r="3.5" fill="currentColor" stroke="none" opacity=".35"/><circle cx="12" cy="12" r="8" stroke-dasharray="2.4 2.6"/>',
  seed:'<circle cx="12" cy="12" r="2.4" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="5.5"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>',
  siphon:'<path d="M3 9c3-3 6 3 9 0s6-3 9 0"/><path d="M3 15c3-3 6 3 9 0s6-3 9 0"/>',
+ prosp:'<path d="M5 9.5L8.5 5h7L19 9.5 12 20z"/><path d="M5 9.5h14M10 5l2 4.5L14 5" opacity=".55"/>',
  eye:'<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/>'
 };
 const svgI=k=>'<svg class="i" viewBox="0 0 24 24" aria-hidden="true">'+(ICONS[k]||'')+'</svg>';
@@ -1262,7 +1262,7 @@ function showAlbum(back){const found=CODEX.filter(e=>rec.codex[e.key]).length;
 function showShop(){
  const up=UPS.map(u=>{const l=ul(u.id),max=u.cost.length,c=u.cost[l];return'<div class="row"><span class="ic">'+svgI(UPI[u.id])+'</span><span><b>'+u.n+(max>1?'<small>'+l+' of '+max+'</small>':'')+'</b><small>'+u.d+'</small></span>'+(l>=max?'<button disabled>Owned</button>':'<button data-u="'+u.id+'"'+(rec.dust<c?' disabled':'')+'>'+svgI('stardust')+c+'</button>')+'</div>';}).join('');
  const sk=SKINS.map(k=>{const own=rec.skins.includes(k.id),eq=rec.skin===k.id,col=k.col==='rainbow'?'linear-gradient(135deg,#f66,#fd6,#6f9,#6cf,#c6f)':k.col?rgba(k.col,1):'rgba(255,255,255,.35)';return'<div class="row"><span class="sw" style="background:'+col+';color:'+(k.col&&k.col!=='rainbow'?rgba(k.col,1):'#fff')+'"></span><span><b>'+k.n+'</b><small>'+(k.col?'A glowing trail behind you as you fly':'No trail')+'</small></span>'+(eq?'<button class="eq" disabled>Wearing</button>':own?'<button class="eq" data-s="'+k.id+'">Wear</button>':'<button data-s="'+k.id+'"'+(rec.dust<k.cost?' disabled':'')+'>'+svgI('stardust')+k.cost+'</button>')+'</div>';}).join('');
- showOv('<div class="psub">Observatory</div><div class="nb">'+svgI('stardust')+rec.dust.toLocaleString()+' stardust</div><div class="shop"><div class="shead">Upgrades that last forever</div>'+up+'<div class="shead">Trails</div>'+sk+'</div><button class="btn pri" id="bBack">Back</button>');
+ showOv('<div class="psub">Observatory</div><div class="nb">'+svgI('stardust')+rec.dust.toLocaleString()+' stardust</div><div class="shop"><div class="shead">Upgrades for this save</div>'+up+'<div class="shead">Trails</div>'+sk+'</div><button class="btn pri" id="bBack">Back</button>');
  ov.querySelectorAll('[data-u]').forEach(b=>b.addEventListener('click',()=>{const u=UPS.find(x=>x.id===b.dataset.u),l=ul(u.id),c=u.cost[l];if(c==null||rec.dust<c)return;rec.dust-=c;rec.up[u.id]=l+1;saveRec();chimeOK();showShop();}));
  ov.querySelectorAll('[data-s]').forEach(b=>b.addEventListener('click',()=>{const k=SKINS.find(x=>x.id===b.dataset.s);if(!rec.skins.includes(k.id)){if(rec.dust<k.cost)return;rec.dust-=k.cost;rec.skins.push(k.id);chimeOK();}rec.skin=k.id;saveRec();showShop();}));
  on('bBack',showTitle);}
@@ -1273,8 +1273,11 @@ function showTitle(){state='title';touch.on=false;$('hud').classList.add('hidden
   (sv?'<button class="btn pri" id="bCont">'+(sv.run&&sv.run.drift?'Keep drifting as ':'Continue as ')+(/^[AEIOU]/.test(STAGES[sv.stage].n)?'an ':'a ')+STAGES[sv.stage].n+'</button>':'')+
   '<button class="btn'+(sv?'':' pri')+'" id="bNew">'+(sv?'New run':'Play')+'</button><button class="btn" id="bDrift">Drift<span class="cnt">no dying</span></button><button class="btn" id="bAlb">Album<span class="cnt">'+CODEX.filter(e=>rec.codex[e.key]).length+' of '+CODEX.length+'</span></button><button class="btn" id="bShop">Observatory<span class="cnt">'+svgI('stardust')+rec.dust.toLocaleString()+'</span></button>'+
     (rec.runs?'<div class="rec">Your best: <b>'+rec.bestName+'</b>'+(rec.bestCycle>1?' in cycle '+rec.bestCycle:'')+'. '+rec.runs+(rec.runs===1?' run':' runs')+', '+rec.eaten.toLocaleString()+' bodies swallowed'+(rec.bangs?', '+rec.bangs+(rec.bangs===1?' Big Bang':' Big Bangs'):'')+'.</div>':'')+
-  sndBtns(),true);
- on('bCont',()=>startRun(sv));on('bNew',()=>startRun(null));on('bDrift',()=>startRun(null,false,null,true));on('bDay',()=>startRun(null,true));on('bAlb',()=>showAlbum(showTitle));on('bShop',showShop);bindSnd();}
+  '<button class="btn quiet" id="bWipe">New game</button>'+sndBtns(),true);
+ on('bCont',()=>startRun(sv));on('bNew',()=>startRun(null));on('bDrift',()=>startRun(null,false,null,true));on('bDay',()=>startRun(null,true));on('bAlb',()=>showAlbum(showTitle));on('bShop',showShop);bindSnd();
+ let armed=0;on('bWipe',()=>{const b=$('bWipe');if(!armed){armed=1;b.textContent='Tap again to wipe stardust, upgrades and trails';setTimeout(()=>{armed=0;if(b.isConnected)b.textContent='New game';},3500);return;}newGame();});}
+// New game: a fresh save. Album, best records and settings are kept; stardust, Observatory upgrades, trails and any run in progress are not.
+function newGame(){rec.dust=0;rec.up={};rec.skins=['classic'];rec.skin='classic';rec.game=(rec.game||1)+1;saveRec();clearSave();showTitle();toast('New game started');}
 function dateKey(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 function startRun(sv,daily,origin,drift){daily=false;run=freshRun();if(drift)run.drift=1;let r=R0;if(!sv&&origin){run.origin=origin;if(origin==='rogue')r=R0*1.33;}
  if(sv){Object.assign(run,sv.run);run.daily=null;run.pacts=run.pacts||[];run.relics=run.relics||[];run.syn=run.syn||[];if(run.rerolls==null)run.rerolls=0;run.gone=new Set(sv.run.gone||[]);run.laws=sv.run.laws||[];run.bossDone=run.bossDone||{};run.boss=null;run.cometT=rr(12,20);run.moonA=0;run.saveT=4;r=sv.r;}
@@ -1301,7 +1304,7 @@ var rollPerks=function(n){const pool=[],lw=RW.l+.012*P.stage;for(const k in PERK
 function cardHTML(k){if(k.startsWith('pact:')){const id=k.slice(5),pc=PACTS[id];return'<button class="tile p" data-k="'+k+'" data-tip="'+pc.up+'. '+pc.dn+'.">'+svgI(pc.ic)+'<b>'+PSN[id]+'</b><span class="pips"><i class="minus"></i></span></button>';}
  const p=PERKS[k],l=lv(k),desc=(k==='dash'&&l>0)?p.d2:p.d;let pips='';if(!(k==='crust'||k==='stardust'||p.max===1)){for(let i=0;i<p.max;i++)pips+='<i class="'+(i<l?'on':i===l?'nx':'')+'"></i>';}
  return'<button class="tile'+(p.r?' '+p.r:'')+'" data-k="'+k+'" data-tip="'+desc+'">'+svgI(k)+'<b>'+(SN[k]||p.n)+'</b><span class="pips">'+pips+'</span></button>';}
-function showPick(reroll){state='pick';if(!reroll)pendingPicks--;touch.on=false;const opts=rollPerks(3+ul('picks'));
+function showPick(reroll){state='pick';if(!reroll)pendingPicks--;touch.on=false;const opts=rollPerks(3);
  showOv('<div class="tipline" id="tip">Hold a choice to read what it does</div><div class="ptiles">'+opts.map(cardHTML).join('')+(run.rerolls>0?'<button class="rr" id="bReroll" aria-label="Reroll">'+svgI('reroll')+'<span>'+run.rerolls+'</span></button>':'')+'</div>',false,'tray');
  const tiles=[...ov.querySelectorAll('.tile')];let ready=false;setTimeout(()=>{tiles.forEach(c=>c.classList.add('in'));setTimeout(()=>ready=true,220);},reroll?30:120);
  tiles.forEach(c=>{let tm=0,held=false;c.addEventListener('pointerdown',()=>{held=false;clearTimeout(tm);tm=setTimeout(()=>{held=true;$('tip').textContent=c.dataset.tip;$('tip').classList.add('on');},380);});
