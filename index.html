@@ -197,7 +197,7 @@ h2{font:600 clamp(40px,12vw,60px)/1 var(--serif);margin:6px 0 20px}
 const $=id=>document.getElementById(id);
 const cv=$('c'),ov=$('ov');let g=cv.getContext('2d');
 const Q=new URLSearchParams(location.search);
-const BUILD='2026-10-16.26';
+const BUILD='2026-10-16.27';
 let W=0,H=0,DPR=1;
 function resize(){DPR=Math.min(window.devicePixelRatio||1,3);let w=window.innerWidth,h=window.innerHeight;
  // iOS home-screen apps can report a viewport shorter than the screen (a black strip at the bottom): take the largest honest height
@@ -654,16 +654,16 @@ function drawLabels(z,ox,oy){const C=[],top=hudBottom()+8,on=(x,y,m)=>x>-m&&x<W+
   g.fillStyle='rgba('+c.col+','+(c.big?.95:.82)+')';g.fillText(c.t,Math.round(bx+11),Math.round(by));if(c.sub){g.font='italic 500 13px Cormorant, Georgia, serif';g.fillStyle='rgba(140,147,184,.85)';g.fillText(c.sub,Math.round(bx+11),Math.round(by+15));}}
  // belts get their name written along the arc, like a chart
  g.textAlign='center';for(const st of activeSys){if(!st.belt)continue;const sx=st.x*z+ox,sy=st.y*z+oy,R1=st.belt.a*z;if(R1<70)continue;let a=Math.atan2(camY-st.y,camX-st.x),px=0,py=0,ok=false;const pxp=P.x*z+ox,pyp=P.y*z+oy;for(const da of [0,.12,-.12,.24,-.24,.36,-.36,.5,-.5]){const aa=a+da*Math.min(1,300/R1)*3;px=sx+Math.cos(aa)*R1;py=sy+Math.sin(aa)*R1;if(on(px,py,-30)&&py>=top&&Math.hypot(px-pxp,py-pyp)>P.r*z*2.6+40){a=aa;ok=true;break;}}if(!ok)continue;
-  let rot=a+Math.PI/2;if(Math.cos(rot)<0)rot+=Math.PI;g.save();g.translate(Math.round(px),Math.round(py));g.rotate(rot);g.font='italic 600 14px Cormorant, Georgia, serif';g.fillStyle='rgba('+GOLD+',.55)';g.fillText(genName(st.id)+' Belt',0,-8);g.restore();}
+  let rot=a+Math.PI/2;if(Math.cos(rot)<0)rot+=Math.PI;g.save();g.translate(Math.round(px),Math.round(py));g.rotate(rot);g.font='italic 600 14px Cormorant, Georgia, serif';g.fillStyle='rgba(159,216,255,.75)';g.fillText(genName(st.id)+' Belt',0,-8);g.restore();}
  g.textBaseline='alphabetic';}
 let hudB=0,hudBT=0;function hudBottom(){if(simT-hudBT>.5||!hudB){hudBT=simT;const h=$('hud');hudB=h&&!h.classList.contains('hidden')&&h.getBoundingClientRect?h.getBoundingClientRect().bottom:0;}return hudB||0;}
 function circleOnScreen(cx,cy,R){if(cx+R<0||cx-R>W||cy+R<0||cy-R>H)return false;const fx=Math.max(Math.abs(cx),Math.abs(cx-W)),fy=Math.max(Math.abs(cy),Math.abs(cy-H));return Math.hypot(fx,fy)>R-2;}
 function drawSystems(z,ox,oy){for(const st of activeSys){const sx=st.x*z+ox,sy=st.y*z+oy;
   for(const pl of st.planets){const R1=pl.orb*z;if(R1<15||R1>4e5||!circleOnScreen(sx,sy,R1))continue;atlasRing(sx,sy,R1,.26,72,0,false);const o=struct.get(pl.id);if(o&&!o.dead&&o.eat<0){const px=o.x*z+ox,py=o.y*z+oy;g.strokeStyle='rgba('+GOLD+',.6)';g.beginPath();g.arc(px,py,Math.max(3,pl.r*z+5),0,TAU);g.stroke();}}
-  if(st.belt){const R1=st.belt.a*z,wd=st.belt.w*z;if(R1>10&&R1<4e5&&circleOnScreen(sx,sy,R1+wd)){{const Rb=mulberry(hashStr(st.id+'belt')),N=Math.min(900,Math.max(80,R1*.9|0)),rot=cosT*14/st.belt.a;for(let i=0;i<N;i++){const a=Rb()*TAU+rot,rr0=R1+(Rb()+Rb()-1)*wd,px=sx+Math.cos(a)*rr0,py=sy+Math.sin(a)*rr0,sz=.8+Rb()*1.8;if(px<-3||px>W+3||py<-3||py>H+3)continue;g.fillStyle=Rb()<.5?'rgba(200,185,160,.75)':'rgba(160,150,140,.7)';g.fillRect(px-sz/2,py-sz/2,sz,sz);}}g.strokeStyle='rgba(210,190,160,.04)';g.lineWidth=Math.max(1,wd*2);g.beginPath();g.arc(sx,sy,R1,0,TAU);g.stroke();atlasRing(sx,sy,R1-wd,.14,0,0,true);atlasRing(sx,sy,R1+wd,.14,0,0,true);}}
+  if(st.belt){const R1=st.belt.a*z,wd=st.belt.w*z;if(R1>10&&R1<4e5&&circleOnScreen(sx,sy,R1+wd)){{const Rb=mulberry(hashStr(st.id+'belt')),N=Math.min(900,Math.max(80,R1*.9|0)),rot=cosT*14/st.belt.a;for(let i=0;i<N;i++){const a=Rb()*TAU+rot,rr0=R1+(Rb()+Rb()-1)*wd,px=sx+Math.cos(a)*rr0,py=sy+Math.sin(a)*rr0,sz=.8+Rb()*1.8;if(px<-3||px>W+3||py<-3||py>H+3)continue;g.fillStyle=Rb()<.5?'rgba(200,185,160,.75)':'rgba(160,150,140,.7)';g.fillRect(px-sz/2,py-sz/2,sz,sz);}}g.strokeStyle='rgba(210,190,160,.04)';g.lineWidth=Math.max(1,wd*2);g.beginPath();g.arc(sx,sy,R1,0,TAU);g.stroke();g.strokeStyle='rgba(159,216,255,.55)';g.lineWidth=1;g.setLineDash([3,5]);for(const q of [R1-wd,R1+wd]){g.beginPath();g.arc(sx,sy,q,0,TAU);g.stroke();}g.setLineDash([]);}}
   for(const pl of st.planets){const o=struct.get(pl.id);if(!o||o.dead||o.eat>=0)continue;const px=o.x*z+ox,py=o.y*z+oy,r0=pl.r*z;
    for(const m of pl.moons){const R1=m.orb*z;if(R1>12&&R1<4e5&&circleOnScreen(px,py,R1))atlasRing(px,py,R1,.2,36,0,false);}
-   if(pl.ring&&r0>1.5&&circleOnScreen(px,py,r0*2.2)){g.strokeStyle='rgba(225,235,250,.085)';g.lineWidth=r0*1.04;g.beginPath();g.arc(px,py,r0*1.58,0,TAU);g.stroke();g.lineWidth=Math.max(1,r0*.03);g.strokeStyle='rgba(235,240,255,.1)';for(const q of [1.22,1.48,1.82]){g.beginPath();g.arc(px,py,r0*q,0,TAU);g.stroke();}}}}}
+   if(pl.ring&&r0>1.5&&circleOnScreen(px,py,r0*2.2)){g.strokeStyle='rgba(225,235,250,.085)';g.lineWidth=r0*1.04;g.beginPath();g.arc(px,py,r0*1.58,0,TAU);g.stroke();g.lineWidth=Math.max(1,r0*.03);g.strokeStyle='rgba(235,240,255,.1)';for(const q of [1.22,1.48,1.82]){g.beginPath();g.arc(px,py,r0*q,0,TAU);g.stroke();}if(r0*2.1<4e5){g.strokeStyle='rgba(159,216,255,.55)';g.lineWidth=1;g.setLineDash([3,5]);g.beginPath();g.arc(px,py,r0*2.1,0,TAU);g.stroke();g.setLineDash([]);}}}}}
 function drawCosmosBG(t){if(!HOME)return;const z=zoom,M=Math.max(W,H),gs=galaxiesNear(camX,camY,viewR()*2.2);
  if(P.stage>=11&&gs.length>1){g.globalCompositeOperation='lighter';g.strokeStyle='rgba(243,181,98,.12)';for(const a of gs){const ns=gs.filter(b=>b!==a).map(b=>[b,Math.hypot(b.x-a.x,b.y-a.y)]).filter(q=>q[1]<CGAL*2.4).sort((p1,p2)=>p1[1]-p2[1]).slice(0,2);for(const [b] of ns){if(b.id<a.id)continue;g.lineWidth=Math.max(1,Math.min(a.r,b.r)*z*.3);g.beginPath();g.moveTo((a.x-camX)*z+W/2,(a.y-camY)*z+H/2);g.lineTo((b.x-camX)*z+W/2,(b.y-camY)*z+H/2);g.stroke();}}g.globalCompositeOperation='source-over';}
  for(const gl of gs){if((run.gone&&run.gone.has(gl.id))||struct.has(gl.id))continue;const x=(gl.x-camX)*z+W/2,y=(gl.y-camY)*z+H/2,rs=gl.r*z;if(rs<1.5||rs>M*6||x+rs*1.2<0||x-rs*1.2>W||y+rs*1.2<0||y-rs*1.2>H)continue;
@@ -1195,7 +1195,7 @@ function showOrigins(){const pool=ORIGINS.slice();const opts=[];while(opts.lengt
 var rollPerks=function(n){const pool=[],lw=RW.l+.012*P.stage;for(const k in PERKS){const p=PERKS[k];let w=PW[k]===undefined?1:PW[k];if(!w)continue;w*=p.r==='l'?lw*rareBoost():p.r==='r'?RW.r*rareBoost():RW.c;if(k==='crust'?run.shields>=3:lv(k)>=p.max)continue;pool.push([k,w]);}
  const out=[];while(out.length<n&&pool.length){let tot=0;for(const q of pool)tot+=q[1];let x=rand()*tot,i=0;for(;i<pool.length-1;i++){x-=pool[i][1];if(x<=0)break;}out.push(pool[i][0]);pool.splice(i,1);}
  while(out.length<n)out.push('stardust');
- const freeP=Object.keys(PACTS).filter(k=>!pact(k));if(P.stage>=2&&freeP.length&&rand()<.28)out[out.length-1]='pact:'+pick(rand,freeP);
+ const freeP=Object.keys(PACTS).filter(k=>!pact(k));if(Q.get('pacts')&&P.stage>=2&&freeP.length&&rand()<.28)out[out.length-1]='pact:'+pick(rand,freeP);
  return out;}
 function cardHTML(k){if(k.startsWith('pact:')){const id=k.slice(5),pc=PACTS[id];return'<button class="tile p" data-k="'+k+'" data-tip="'+pc.up+'. '+pc.dn+'.">'+svgI(pc.ic)+'<b>'+PSN[id]+'</b><span class="pips"><i class="minus"></i></span></button>';}
  const p=PERKS[k],l=lv(k),desc=(k==='dash'&&l>0)?p.d2:p.d;let pips='';if(!(k==='crust'||k==='stardust'||p.max===1)){for(let i=0;i<p.max;i++)pips+='<i class="'+(i<l?'on':i===l?'nx':'')+'"></i>';}
