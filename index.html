@@ -44,6 +44,7 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
 #snext{font:italic 500 16px/1 var(--serif);white-space:nowrap}
 .goal{display:flex;justify-content:space-between;gap:12px;margin-top:8px;font:italic 500 16px/1.15 var(--serif);color:var(--dust)}
 .goal.done{color:var(--gold)}
+.goal.gate{color:var(--ice)}
 #gprog{font:600 12px var(--sans);font-style:normal;font-variant-numeric:tabular-nums;color:var(--star);opacity:.8}
 .ibtn{pointer-events:auto;flex:none;width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:rgba(13,15,30,.55);display:grid;place-items:center;padding:0;touch-action:manipulation}
 #perks{display:flex;flex-wrap:wrap;gap:13px;margin-top:11px;max-width:380px;color:var(--dust)}
@@ -198,7 +199,7 @@ h2{font:600 clamp(40px,12vw,60px)/1 var(--serif);margin:6px 0 20px}
 const $=id=>document.getElementById(id);
 const cv=$('c'),ov=$('ov');let g=cv.getContext('2d');
 const Q=new URLSearchParams(location.search);
-const BUILD='2026-10-16.30';
+const BUILD='2026-10-17.31';
 let W=0,H=0,DPR=1;
 function resize(){DPR=Math.min(window.devicePixelRatio||1,3);let w=window.innerWidth,h=window.innerHeight;
  // iOS home-screen apps can report a viewport shorter than the screen (a black strip at the bottom): take the largest honest height
@@ -536,11 +537,13 @@ const clearSave=()=>{try{localStorage.removeItem(SV);}catch(e){}};
 // ---------- state
 let uid=0,rings=[],shocks=[],evWarn=null,needAttract=false,state='title',P,run,objs=[],parts=[],camX=0,camY=0,zoom=1,shake=0,banner=null,flash=0,pendingPicks=0,pickDelay=0,deathT=0,bangT=0,killer='',overShown=false,newBest=false,simT=0;
 const lv=k=>run.perks[k]||0;const ul=k=>rec.up[k]||0;
-const GAIN=.4,EAT_T=.4,CHAIN_T=.9,CHAIN_MAX=10;const GOLDQ=Q.has('gold');
+let PREY_EXP=Q.get('prey')?+Q.get('prey'):1.6;const M3=r=>r*r*r,R3=m=>Math.cbrt(Math.max(0,m));
+const GAIN=Q.get('gain')?+Q.get('gain'):1.15,EAT_T=.4,CHAIN_T=.9,CHAIN_MAX=10;const GOLDQ=Q.has('gold');
 // Big Bang resistance: perks carry over and stack, so later cycles slow growth by how built-up you are (0..1 of every perk maxed).
 let buildF=0,buildSig='';function buildFrac(){const sig=JSON.stringify(run.perks);if(sig!==buildSig){buildSig=sig;let a=0,b=0;for(const k in PERKS){const p=PERKS[k];if(PW[k]===0||k==='crust')continue;b+=1;a+=Math.min(lv(k),p.max)/p.max;}buildF=b?a/b:0;}return buildF;}
 const RESIST=()=>run.cycle>1?1/(1+RES_K*buildFrac()):1;let RES_K=Q.get('resk')?+Q.get('resk'):2.5;
-const gainMult=()=>RESIST()*GAIN*(1+.12*lv('feast'))*(pact('hunger')?1.35:1)*(pact('weight')?1.25:1)*(1+.15*lv('momentum')*clamp(Math.hypot(P.vx,P.vy)/(P.r*4),0,1))*Math.pow(.7,run.cycle-1)/(1+.04*P.stage+.06*Math.max(0,P.stage-11)+.15*Math.max(0,P.stage-12));
+const PACE=[0.61,1.16,1.05,0.94,1.2,1.47,0.82,1.37,1.39,1.21,1.18,1.53,0.99,0.84,0.29,0.54,0.8,0.5];
+const gainMult=()=>RESIST()*GAIN*PACE[Math.min(17,P.stage)]*(1+.12*lv('feast'))*(pact('hunger')?1.35:1)*(pact('weight')?1.25:1)*(1+.15*lv('momentum')*clamp(Math.hypot(P.vx,P.vy)/(P.r*4),0,1))*Math.pow(.7,run.cycle-1)/(1+.04*P.stage+.06*Math.max(0,P.stage-11)+.15*Math.max(0,P.stage-12));
 const pullRangeMul=()=>(1+.3*lv('well'))*(org('dark')?1.4:1)*(pact('haste')?.8:1)*(syn('disk')?1.15:1)*(relic('jove')?1.5:1);
 const pullStrMul=()=>(1+.4*lv('magnet'))*(syn('disk')?1.3:1)*(relic('attractor')?1.4:1);
 const speedMul=()=>(P&&simT-(P.nebAt||-9)<.2?.72:1)*(1+.12*lv('thrust'))*(org('iron')?.88:1)*(pact('haste')?1.3:1)*(pact('weight')?.8:1);
@@ -557,10 +560,11 @@ function resetWorld(){objs=[];parts=[];crumbs=[];anoms=[];floaters=[];struct.cle
 function rollSize(z){const R=P.r,st=P.stage,pT=Math.min(.3,(.075+.005*st+.035*(run.cycle-1)+(hasLaw('hostile')?.06:0))*(z&&z.t==='ring'?.5:z&&z.t==='void'?.6:1)),u=rand();
  if(u<pT)return R*(1.2+Math.pow(rand(),1.6)*2.6);
  if(u<pT+.07)return R*rr(.85,1.15);
- return R*(.04+.62*Math.pow(rand(),2.1));}
+ return R*(.04+.66*Math.pow(rand(),PREY_EXP));}
 function makeObj(x,y,r){const s=rr(.04,.3)*P.r,d=rand()*TAU;return{id:++uid,x,y,r,vx:Math.cos(d)*s,vy:Math.sin(d)*s,a:rand()*TAU,sp:rr(-.8,.8),v:(rand()*6)|0,k:kindOf(r),eat:-1,riv:null,com:0,dead:0,host:null,pulse:0,cd:0,src:null,srcT:0,pulled:0};}
 function spawnBody(x,y,r,z){z=z||{t:'space'};
  if(rand()<.07){const n=5+((rand()*5)|0),s=P.r*rr(.4,1),d=rand()*TAU,vx=Math.cos(d)*s,vy=Math.sin(d)*s;for(let i=0;i<n;i++){const o=makeObj(x+rr(-1,1)*P.r*2,y+rr(-1,1)*P.r*2,P.r*rr(.05,.16));o.vx=vx+rr(-.1,.1)*P.r;o.vy=vy+rr(-.1,.1)*P.r;objs.push(o);}return n;}
+ if(P.stage>=6&&P.stage<=9&&z.t!=='ring'&&z.t!=='disk'&&rand()<(run.gate&&run.gate.gas?.15:.05)){const o=makeObj(x,y,P.r*rr(.25,.8));o.k='nebula';o.neb=1;o.sp=rr(-.15,.15);objs.push(o);return 1;}
  if(z.t==='disk'&&P.stage>=9&&P.stage<=14&&rand()<.22){const o=makeObj(x,y,P.r*rr(.25,.85));o.k='nebula';o.neb=1;o.sp=rr(-.15,.15);objs.push(o);return 1;}
  if((z.t==='disk'||P.stage>=10)&&P.stage>=9&&P.stage<=12&&rand()<.07){const o=makeObj(x,y,P.r*rr(.08,.3));o.k='wdwarf';objs.push(o);return 1;}
  if(P.stage>=12&&P.stage<=15&&rand()<.06){const o=makeObj(x,y,P.r*rr(.3,1.6));o.k='globular';o.sp=rr(-.05,.05);objs.push(o);return 1;}
@@ -580,6 +584,7 @@ function fillField(initial){const VR=viewR(),A=VR*1.45;let n=0,rv=0;for(const o 
   if(initial){d=d0;const minD=r>P.r*.6?P.r*9+r:P.r*2.5+r;if(d<minD)d=minD+rand()*P.r*3;}else d=Math.max(d0,VR*1.08+r);
   const sx=P.x+Math.cos(ang)*d,sy=P.y+Math.sin(ang)*d;let blocked=false;for(const L of objs){if(L.lm&&!L.dead&&L.r>r*2){const qx=L.x-sx,qy=L.y-sy;if(qx*qx+qy*qy<(L.r+r)*(L.r+r)){blocked=true;break;}}}if(blocked)continue;
   n+=spawnBody(sx,sy,r,zz);}
+ if(run.gate&&run.gate.gas&&!initial&&rand()<.06){let gc=0;for(const o of objs)if(!o.dead&&o.eat<0&&o.neb&&o.r<P.r*eatFor(o))gc++;if(gc<4){const ang=rand()*TAU,d=VR*1.04,x=P.x+Math.cos(ang)*d,y=P.y+Math.sin(ang)*d,o=makeObj(x,y,P.r*rr(.3,.8)),tx=P.x+rr(-.3,.3)*VR-x,ty=P.y+rr(-.3,.3)*VR-y,tl=Math.hypot(tx,ty)||1,sp=P.r*rr(1.6,2.4);o.k='nebula';o.neb=1;o.sp=rr(-.15,.15);o.vx=tx/tl*sp;o.vy=ty/tl*sp;objs.push(o);}}
  const rt=Math.min(12,(1+Math.floor((P.stage+2)/3)+(run.cycle-1))*(pact('void')?2:1));
  if(rv<rt&&(initial||rand()<.02)){const ang=rand()*TAU,d=rr(VR*1.1,A);objs.push(makeRival(P.x+Math.cos(ang)*d,P.y+Math.sin(ang)*d,P.r*(rand()<(P.stage<3?.35:.5)?rr(1.2,1.7+Math.min(.7,P.stage*.05)):rr(.5,1))));}}
 // ---------- cosmos: one nested universe, generated around you on demand, identical for a given seed.
@@ -601,8 +606,9 @@ function galaxiesNear(x,y,rad){const out=[];if(HOME)out.push(HOME.gal);const x0=
  for(let gx=x0;gx<=x1;gx++)for(let gy=y0;gy<=y1;gy++){const gl=galaxyCell(gx,gy);if(gl&&Math.abs(gl.x-x)<rad+gl.r&&Math.abs(gl.y-y)<rad+gl.r)out.push(gl);}return out;}
 function galaxyAt(x,y){for(const gl of galaxiesNear(x,y,0))if(Math.hypot(gl.x-x,gl.y-y)<gl.r)return gl;return null;}
 function armDens(gl,x,y){const dx=x-gl.x,dy=y-gl.y,d=Math.hypot(dx,dy)/gl.r;if(d>=1)return 0;const th=Math.atan2(dy,dx)-gl.a,ph=(th-d*gl.tw*Math.PI)*gl.arms/TAU;return Math.exp(-d*1.8)*(.2+.8*Math.pow(.5+.5*Math.cos(ph*TAU),3))*(d<.07?.3:1);}
-function mkPlanet(R,sy,orb,st,gas,vF,ringF){const p={id:sy.id+'p'+sy.planets.length,r:szSt(st),orb,ph:R()*TAU,w:14/orb*(R()<.9?1:-1),gas,v:vF!=null?vF:gas?[1,3,5][(R()*3)|0]:(R()*6)|0,ring:gas&&(ringF||R()<.55),moons:[]};
- const nm=gas?1+((R()*4)|0):(R()<.5?1:0);let mo=p.r*(p.ring?2.4:1.8);for(let j=0;j<nm;j++){const mr=szSt(gas?4.3+R()*1.5:4.2+R()*.9);mo+=mr*2+p.r*(.25+R()*.5);p.moons.push({id:p.id+'m'+j,r:mr,orb:mo,ph:R()*TAU,w:10/mo*(R()<.5?-1:1),v:(R()*6)|0});}
+const KEP_P=1.63e-3,KEP_M=6e-3;
+function mkPlanet(R,sy,orb,st,gas,vF,ringF){const p={id:sy.id+'p'+sy.planets.length,r:szSt(st),orb,ph:R()*TAU,w:KEP_P*Math.pow(sy.sr/orb,1.5)*(R()<.9?1:-1),gas,v:vF!=null?vF:gas?[1,3,5][(R()*3)|0]:(R()*6)|0,ring:gas&&(ringF||R()<.55),moons:[]};
+ const nm=gas?1+((R()*4)|0):(R()<.5?1:0);let mo=p.r*(p.ring?2.4:1.8);for(let j=0;j<nm;j++){const mr=szSt(gas?4.3+R()*1.5:4.2+R()*.9);mo+=mr*2+p.r*(.25+R()*.5);p.moons.push({id:p.id+'m'+j,r:mr,orb:mo,ph:R()*TAU,w:KEP_M*Math.pow(p.r/mo,1.5)*(R()<.5?-1:1),v:(R()*6)|0});}
  return p;}
 function makeSystem(R,x,y,id,home){const st=home?10.45:10+R()*1.15,sy={id,x,y,sr:szSt(st),sv:st>10.95?-1:home?0:((R()*4)|0),planets:[]};
  const nr=home?2:1+((R()*3)|0),ng=home?3:((R()*4)|0);let orb=sy.sr*2.6;
@@ -652,7 +658,7 @@ function zoneAt(x,y){for(const st of activeSys){const d=Math.hypot(x-st.x,y-st.y
   if(d<st.outer)return{t:'sys'};return{t:'oort',hx:st.x,hy:st.y,hvx:0,hvy:0,dir:1};}
  if(P.stage>=8){const gl=galaxyAt(x,y);if(gl)return{t:'disk',arm:armDens(gl,x,y)};const w=webInfo(x,y);return{t:'void',w};}
  return{t:'space'};}
-function zoneDens(z){return z.t==='ring'?2:z.t==='belt'?1.6:z.t==='sys'?.8:z.t==='oort'?.6:z.t==='disk'?.7+z.arm:z.t==='void'?.45+1.2*z.w.dens:.8;}
+function zoneDens(z){return z.t==='ring'?2:z.t==='belt'?1.6:z.t==='sys'?1.15:z.t==='oort'?.85:z.t==='disk'?.7+z.arm:z.t==='void'?.45+1.2*z.w.dens:1;}
 const GOLD='243,181,98';
 function atlasRing(x,y,R,al,n,rot,dash){g.strokeStyle='rgba('+GOLD+','+al+')';g.lineWidth=1;if(dash)g.setLineDash([5,6]);g.beginPath();g.arc(x,y,R,0,TAU);g.stroke();if(dash)g.setLineDash([]);
  if(n&&R>36&&R<3000){g.beginPath();for(let i=0;i<n;i++){const a=rot+i*TAU/n,l=i%(n/4)===0?8:i%(n/12)===0?5:2.5,c=Math.cos(a),sn=Math.sin(a),px=x+c*R,py=y+sn*R;if(px<-12||px>W+12||py<-12||py>H+12)continue;g.moveTo(px,py);g.lineTo(x+c*(R+l),y+sn*(R+l));}g.stroke();}}
@@ -714,8 +720,8 @@ function crumbBurst(x,y,rad,n){for(let i=0;i<n;i++){const a=rand()*TAU,d=Math.sq
 function stepCrumbs(dt,live){const VR=viewR(),A=VR*1.3,A2=(A*1.25)**2,pr=P.r,cols=crumbCols(),gR=pr*2*pullRangeMul()*(1+.4*lv('regolith'))*1.15,gR2=gR*gR;
  const tgt=Math.round(130*(pact('swarm')?2:1)*clamp(zoneDens(zoneP),.5,1.6)*(hasLaw('scarce')?.75:1));
  let j=0;for(const c of crumbs){const dx=P.x-c.x,dy=P.y-c.y,d2=dx*dx+dy*dy;if(d2>A2||c.r<pr*.006)continue;
-  if(live&&P.alive){if(d2<gR2){const d=Math.sqrt(d2)||1,f=pr*12*(1-d/gR)/d*dt;c.vx+=dx*f;c.vy+=dy*f;c.vx*=1-dt*1.5;c.vy*=1-dt*1.5;}
-   if(d2<pr*pr){P.r=Math.sqrt(P.r*P.r+c.r*c.r*7*(1+lv('regolith'))*gainMult());P.lastEat=simT;if(state==='play'){goalHit('dust');if(rand()<.35&&parts.length<480)parts.push({x:c.x,y:c.y,vx:0,vy:0,l:0,m:.25,c:c.c,s:c.r*1.5,tg:P});}continue;}}
+  if(live&&P.alive){if(d2<gR2){const d=Math.sqrt(d2)||1,q=pr/Math.max(d,pr),f=pr*15*q*q*(1-d2/gR2)/d*dt;c.vx+=dx*f;c.vy+=dy*f;c.vx*=1-dt*1.5;c.vy*=1-dt*1.5;}
+   if(d2<pr*pr){grow(c.r*c.r*P.r*CRUMB_K*(1+lv('regolith'))*gainMult(),zoneP.t==='disk'?.6:0);P.lastEat=simT;if(state==='play'){goalHit('dust');if(rand()<.35&&parts.length<480)parts.push({x:c.x,y:c.y,vx:0,vy:0,l:0,m:.25,c:c.c,s:c.r*1.5,tg:P});}continue;}}
   c.x+=c.vx*dt;c.y+=c.vy*dt;crumbs[j++]=c;}crumbs.length=j;
  let budget=crumbs.length<tgt*.3?400:6;while(crumbs.length<tgt&&budget-->0){const a=rand()*TAU,d=crumbs.length<tgt*.3?Math.sqrt(rand())*A:rr(VR*1.05,A),c=mkCrumb(P.x+Math.cos(a)*d,P.y+Math.sin(a)*d,cols);
   if(zoneP.hx!=null){const qx=c.x-zoneP.hx,qy=c.y-zoneP.hy,ql=Math.hypot(qx,qy)||1,sp=pr*rr(.2,.4)*zoneP.dir;c.vx=zoneP.hvx-qy/ql*sp;c.vy=zoneP.hvy+qx/ql*sp;}crumbs.push(c);}
@@ -774,8 +780,8 @@ function absorb(o,by,mult){if(o.eat>=0)return;o.eat=0;if(o.sys){for(const q of o
  by.pulse=Math.min(1.5,(by.pulse||0)+.25+o.r/by.r);
  if(by===P){P.lastEat=simT;if(mult>0&&state==='play'){run.chN=simT-(run.chT||-9)<CHAIN_T?(run.chN||0)+1:1;run.chT=simT;mult*=1+.015*Math.min(CHAIN_MAX,run.chN-1);}if(o.gold&&state==='play')goldFound(o);if(o.frag&&o.src!==P)mult*=1+.4*lv('scav');if(state==='play')goalEat(o);run.eatN=(run.eatN||0)+1;if(lv('spiral')&&run.eatN%15===0)crumbBurst(P.x,P.y,P.r*3,24);if(lv('chain')&&o.r>P.r*.5&&state==='play')shocks.push({x:P.x,y:P.y,ref:P,r:P.r,max:P.r*8,spd:P.r*22,str:6,chip:1,self:1,col:[255,205,140]});if(state!=='title')discover(codexKey(o));if(o.boss)bossWin(o);if(o.neb)mult*=1.6;if(state==='play'&&!run.fin&&(o.core||o.sid==='GH')){const home=o.sid==='GH';banner={t:0,txt:home?'Home Swallowed':'Heart of the Galaxy',sub:home?'Every star you grew up among is yours':'Its central black hole is yours'};for(let i=0;i<5;i++)rings.push({ref:P,r0:1+i*.5,r1:10+i*2.5,t:-i*.15,m:1.8,col:[243,181,98],w:2,wave:1});for(let i=0;i<70&&parts.length<520;i++){const f=i/70,a=Math.atan2(o.y-P.y,o.x-P.x)+f*5,dd=Math.hypot(o.x-P.x,o.y-P.y)*(1-f*.5)+P.r*.6;parts.push({x:P.x+Math.cos(a)*dd,y:P.y+Math.sin(a)*dd,vx:0,vy:0,l:0,m:1.2,c:home?[255,236,200]:[200,175,255],s:P.r*.05,tg:P});}tone(65,2.4,'sine',.35,330);chime();}
  if(P.stage>=12&&(o.k==='hole'||o.k==='quasar')&&o.r>P.r*.3&&state==='play'){mult*=1.3;for(let i=0;i<4;i++)rings.push({ref:P,r0:1+i*.6,r1:9+i*2,t:-i*.15,m:1.6,col:[200,175,255],w:2,wave:1});shocks.push({x:P.x,y:P.y,ref:P,r:P.r,max:P.r*12,spd:P.r*18,str:8,chip:0,self:1,col:[190,160,255]});shake=Math.max(shake,.7);tone(60,1.3,'sine',.35,700);toast('Black holes merged. Spacetime rippled.');}
- if(P.stage>=13&&(o.k==='star'||o.k==='blue'||o.k==='neutron')&&state==='play'){mult*=1.3;const col=KCOL[o.k];for(let i=0;i<46&&parts.length<500;i++){const f=i/46,a=Math.atan2(o.y-P.y,o.x-P.x)+f*4.2,d=Math.hypot(o.x-P.x,o.y-P.y)*(1-f*.6)+P.r*.5;parts.push({x:P.x+Math.cos(a)*d,y:P.y+Math.sin(a)*d,vx:-Math.sin(a)*P.r*4,vy:Math.cos(a)*P.r*4,l:-f*.5,m:1.3,c:col,s:P.r*rr(.05,.12),tg:P});}}if(o.gal)mult*=1.2;P.r=Math.sqrt(P.r*P.r+o.r*o.r*mult*gainMult());P.peak=Math.max(P.peak,P.r);if(mult>0)run.eaten++;if(state==='play')popSound(o.r/P.r);burst(o.x,o.y,o.k,2+Math.min(5,(o.r/P.r*10)|0),P,.6);if(o.r>P.r*.45)rings.push({ref:P,r0:1,r1:1.9,t:0,m:.45,col:KCOL[o.k],w:2.5});checkStage();}
- else{if(mult>0&&!(by.riv&&by.r>P.r*2.6)){by.r=Math.sqrt(by.r*by.r+o.r*o.r*mult);}if(o.r>P.r*.3)burst(o.x,o.y,o.k,3,by,.6);}}
+ if(P.stage>=13&&(o.k==='star'||o.k==='blue'||o.k==='neutron')&&state==='play'){mult*=1.3;const col=KCOL[o.k];for(let i=0;i<46&&parts.length<500;i++){const f=i/46,a=Math.atan2(o.y-P.y,o.x-P.x)+f*4.2,d=Math.hypot(o.x-P.x,o.y-P.y)*(1-f*.6)+P.r*.5;parts.push({x:P.x+Math.cos(a)*d,y:P.y+Math.sin(a)*d,vx:-Math.sin(a)*P.r*4,vy:Math.cos(a)*P.r*4,l:-f*.5,m:1.3,c:col,s:P.r*rr(.05,.12),tg:P});}}if(o.gal)mult*=1.2;grow(M3(o.r)*mult*gainMult(),gasShare(o));P.peak=Math.max(P.peak,P.r);if(mult>0)run.eaten++;if(state==='play')popSound(o.r/P.r);burst(o.x,o.y,o.k,2+Math.min(5,(o.r/P.r*10)|0),P,.6);if(o.r>P.r*.45)rings.push({ref:P,r0:1,r1:1.9,t:0,m:.45,col:KCOL[o.k],w:2.5});checkStage();}
+ else{if(mult>0&&!(by.riv&&by.r>P.r*2.6)){by.r=R3(M3(by.r)+M3(o.r)*mult);}if(o.r>P.r*.3)burst(o.x,o.y,o.k,3,by,.6);}}
 // bodies that grow or shrink into a new type keep a similar colour and cross-fade instead of popping
 const AVG=new Map();
 function colorOf(k,v){const key=k+v;if(AVG.has(key))return AVG.get(key);const sp=getSprite(k,v,24);let c=KCOL[k]||[150,150,150];try{const d=sp.c.getContext('2d').getImageData(0,0,sp.size,sp.size).data;let r=0,gg=0,b=0,n=0;for(let i=0;i<d.length;i+=16){if(d[i+3]>200){r+=d[i];gg+=d[i+1];b+=d[i+2];n++;}}if(n)c=[r/n,gg/n,b/n];}catch(e){}AVG.set(key,c);return c;}
@@ -783,30 +789,38 @@ function matchV(k,col){let best=0,bd=1e12;for(let v=0;v<6;v++){const c=colorOf(k
 function setKind(o,k){if(o.k===k)return;const col=colorOf(o.k,o.v);o.pk=o.k;o.pv=o.v;o.k=k;o.v=matchV(k,col);o.kt=0;}
 function drawObjBody(o,x,y,rs,lit){if(o.pk&&o.kt<1){o.kt=Math.min(1,o.kt+frameDt/.9);const e=o.kt*o.kt*(3-2*o.kt),ga=g.globalAlpha;g.globalAlpha=ga*(1-e);drawBody(o.pk,o.pv,x,y,rs*(1+.08*Math.sin(e*Math.PI)),o.a,lit);g.globalAlpha=ga*e;drawBody(o.k,o.v,x,y,rs*(1+.08*Math.sin(e*Math.PI)),o.a,lit);g.globalAlpha=ga;if(o.kt>=1)o.pk=null;return;}drawBody(o.k,o.v,x,y,rs,o.a,lit);}
 function checkStage(){const ok=STAGES[P.stage].k,ov=P.v;checkStage0();const nk=STAGES[P.stage].k;if(nk!==ok){P.pk=ok;P.pv=ov;P.v=matchV(nk,colorOf(ok,ov));P.kt=0;}}
-function checkStage0(){const s=Math.min(LAST,stageOf(P.r));if(s===P.stage)return;
+// ---------- formation gates: the next form needs the right material, not just mass.
+// Bank: mass eaten while held at a gate is kept and released at once when the gate opens (runaway accretion is sudden).
+const GATES={8:{gas:.15,txt:'Gather gas to become a giant',done:'Runaway accretion: you pulled in a whole atmosphere'},10:{gas:.3,txt:'Gather gas to ignite',done:'Enough hydrogen. Fusion ignites.'},14:{chain:5,txt:'Feed fast to light a quasar',done:'Feeding so fast you outshine galaxies'}};
+function gateProg(G,s){return(run.gasM||0)/(G.gas*M3(szSt(s)));}
+function gateCheck(){run.gate=null;if(run.fin||!P.alive||state==='title')return;const s=P.stage+1,G=GATES[s];if(!G||(run.maxStage||0)>=s||stageF(P.r)<s-.3)return;
+ const met=G.gas?gateProg(G,s)>=1:(run.chN>=G.chain&&simT-run.chT<CHAIN_T);
+ if(met){if(run.bank){P.r=R3(M3(P.r)+run.bank);run.bank=0;}if(G.gas&&stageF(P.r)>=s)run.gasM=0;return;}
+ run.gate=G;const lim=szSt(s)*.995;if(P.r>lim){run.bank=Math.min(M3(lim)*3,(run.bank||0)+M3(P.r)-M3(lim));P.r=lim;}}
+function checkStage0(){gateCheck();const s=Math.min(LAST,stageOf(P.r));if(s===P.stage)return;
  if(s<P.stage){if(stageF(P.r)>P.stage-.08)return;P.stage=Math.max(0,s);if(state==='play')toast('Shrank back to '+STAGES[P.stage].n);return;}
  if(state==='title'){P.stage=s;if(s>=6)needAttract=true;return;}
  const prev=Math.max(P.stage,run.maxStage||0);P.stage=s;if(s<=prev)return;
  const gained=s-prev;run.maxStage=s;
  if(s>=LAST){startFinale();return;}
- pendingPicks+=gained;pickDelay=.3;banner={t:0,txt:STAGES[s].n,sub:STAGES[s].sub};
+ pendingPicks+=gained;pickDelay=.3;banner={t:0,txt:STAGES[s].n,sub:GATES[s]?GATES[s].done:STAGES[s].sub};
  if(s>=10&&prev<10&&!run.ignited){run.ignited=1;flash=Math.max(flash,.7);banner={t:0,txt:'Ignition',sub:STAGES[10].sub};rings.push({ref:P,r0:1,r1:16,t:0,m:1.6,col:[255,230,150],w:6});tone(110,2.2,'sine',.3,440);}
  if(s>=12&&prev<12){shocks.push({x:P.x,y:P.y,ref:P,r:P.r,max:viewR()*1.7,spd:viewR()*1.3,str:12,chip:1,self:1,col:[200,230,255]});flash=Math.max(flash,.55);shake=1;banner={t:0,txt:'Supernova',sub:'You exploded and collapsed into a neutron star'};tone(50,1.6,'sine',.5,28);}
  newGoal();
  if(s>=13&&prev<13){for(let i=0;i<4;i++)rings.push({ref:P,r0:7-i,r1:1,t:-i*.12,m:.9,col:[190,140,255],w:3});}chime();rings.push({ref:P,r0:1,r1:10,t:0,m:1.3,col:[255,220,170],w:4});rings.push({ref:P,wheel:1,r0:1,r1:1,t:0,m:2.4,col:[243,181,98],w:1});burst(P.x,P.y,STAGES[s].k,24,null,1.4);}
-function chipPlayer(o,nx,ny,frac){if(P.chipCd>0)return;if(P.lastChip===o&&simT-P.lastChipT<2.5&&o.r>P.r*1.25){hitPlayer(o);return;}P.lastChip=o;P.lastChipT=simT;if(o.riv){o.riv.mode='rest';o.riv.th=2;o.riv.tx=o.x-nx*P.r*30;o.riv.ty=o.y-ny*P.r*30;}P.chipCd=.6;const m=P.r*P.r*frac,ix=P.x-nx*P.r,iy=P.y-ny*P.r;P.r=Math.sqrt(P.r*P.r-m);
+function chipPlayer(o,nx,ny,frac){if(P.chipCd>0)return;if(P.lastChip===o&&simT-P.lastChipT<2.5&&o.r>P.r*1.25){hitPlayer(o);return;}P.lastChip=o;P.lastChipT=simT;if(o.riv){o.riv.mode='rest';o.riv.th=2;o.riv.tx=o.x-nx*P.r*30;o.riv.ty=o.y-ny*P.r*30;}P.chipCd=.6;const m=M3(P.r)*frac*1.4,ix=P.x-nx*P.r,iy=P.y-ny*P.r;P.r=R3(M3(P.r)-m);
  spray(ix,iy,Math.atan2(ny,nx)+(rand()<.5?-1.3:1.3),m,P,P.vx*.3,P.vy*.3);sparks(ix,iy,12);shake=Math.max(shake,.45);crunch(1);tone(180,.25,'square',.08,70);
  rings.push({ref:P,r0:1.05,r1:1.5,t:0,m:.35,col:[255,90,90],w:3});P.pulse=0;checkStage();
  if(!rec.chipTip){rec.chipTip=1;saveRec();toast('💥 Bumping bigger bodies knocks pieces off you');}}
 function hitPlayer(o){
  if(run.drift){driftHit(o);return;}
- if(run.shields>0){run.shields--;if(lv('seed'))shocks.push({x:P.x,y:P.y,ref:P,r:P.r,max:P.r*10,spd:P.r*24,str:12,chip:1,self:1,col:[255,220,160]});spray(P.x,P.y,Math.atan2(P.y-o.y,P.x-o.x),P.r*P.r*.15,P,P.vx,P.vy);P.r*=Math.sqrt(.75);checkStage();P.inv=1.6;const dx=P.x-o.x,dy=P.y-o.y,d=Math.hypot(dx,dy)||1;P.vx=dx/d*P.r*12;P.vy=dy/d*P.r*12;shake=.6;thud();burst(P.x,P.y,'comet',14);toast('🛡️ Shield took the hit');return;}
+ if(run.shields>0){run.shields--;if(lv('seed'))shocks.push({x:P.x,y:P.y,ref:P,r:P.r,max:P.r*10,spd:P.r*24,str:12,chip:1,self:1,col:[255,220,160]});spray(P.x,P.y,Math.atan2(P.y-o.y,P.x-o.x),M3(P.r)*.2,P,P.vx,P.vy);P.r*=Math.sqrt(.75);checkStage();P.inv=1.6;const dx=P.x-o.x,dy=P.y-o.y,d=Math.hypot(dx,dy)||1;P.vx=dx/d*P.r*12;P.vy=dy/d*P.r*12;shake=.6;thud();burst(P.x,P.y,'comet',14);toast('🛡️ Shield took the hit');return;}
  if(lv('phoenix')&&!run.phoenixUsed){run.phoenixUsed=true;P.r*=Math.sqrt(.6);P.inv=2.5;for(const q of objs){if(q.r*EAT0>P.r){const dx=q.x-P.x,dy=q.y-P.y;if(dx*dx+dy*dy<(P.r*9+q.r)**2){q.dead=1;burst(q.x,q.y,q.k,10);}}}shake=1;thud();toast('🔥 Second Wind!');return;}
  P.alive=false;state='dead';deathT=0;overShown=false;
  killer=o.boss?o.boss.d.name:o.bh?'a rogue black hole':o.com?'a comet':o.riv?'a rogue '+nameOf(o.r):article(nameOf(o.r));
  burst(P.x,P.y,STAGES[P.stage].k,40);shake=1.2;deathSound();clearSave();finishRun();}
 // Drift: anything that would swallow you only knocks you away and takes a little mass
-function driftHit(o){if(P.inv>0)return;const dx=P.x-o.x,dy=P.y-o.y,d=Math.hypot(dx,dy)||1;spray(P.x-dx/d*P.r,P.y-dy/d*P.r,Math.atan2(-dy,-dx),P.r*P.r*.1,P,P.vx,P.vy);P.r*=Math.sqrt(.92);checkStage();P.inv=2.2;P.vx=dx/d*P.r*12+(o.vx||0);P.vy=dy/d*P.r*12+(o.vy||0);shake=.5;thud();rings.push({ref:P,r0:1,r1:2.4,t:0,m:.5,col:[159,216,255],w:2});}
+function driftHit(o){if(P.inv>0)return;const dx=P.x-o.x,dy=P.y-o.y,d=Math.hypot(dx,dy)||1;spray(P.x-dx/d*P.r,P.y-dy/d*P.r,Math.atan2(-dy,-dx),M3(P.r)*.12,P,P.vx,P.vy);P.r*=Math.sqrt(.92);checkStage();P.inv=2.2;P.vx=dx/d*P.r*12+(o.vx||0);P.vy=dy/d*P.r*12+(o.vy||0);shake=.5;thud();rings.push({ref:P,r0:1,r1:2.4,t:0,m:.5,col:[159,216,255],w:2});}
 function finishRun(){const best=Math.max(P.stage,run.maxStage||0);run.dustEarned=(run.bonusDust||0)+(org('glass')?2:1)*Math.round((Math.floor(run.eaten/4)+best*10+(run.cycle-1)*100+(run.bossWins||0)*30)*(1+.25*ul('magnet')));rec.dust+=run.dustEarned;const score=(run.cycle-1)*LAST+best;newBest=!run.drift&&score>rec.best;if(newBest){rec.best=score;rec.bestName=STAGES[best].n;rec.bestCycle=run.cycle;}rec.runs++;rec.eaten+=run.eaten;if(run.daily){const sc=score;if(!rec.daily||rec.daily.d!==run.daily||sc>rec.daily.s)rec.daily={d:run.daily,s:sc,n:STAGES[best].n};}saveRec();}
 function startFinale(){if(run.fin)return;run.fin={t:0,n:0};P.inv=99;pendingPicks=0;banner={t:0,txt:'Universe',sub:'Now swallow everything.'};rings.push({ref:P,wheel:1,r0:1,r1:1,t:0,m:2.4,col:[243,181,98],w:1});chime();tone(55,4,'sine',.3,110);}
 const FIN_T=5.5;
@@ -818,7 +832,7 @@ function finaleStep(dt){const f=run.fin;f.t+=dt;P.inv=99;const VR=viewR(),k=clam
 function bigBang(){state='bang';bangT=0;rec.bangs++;discover('universe');saveRec();bigSound();shocks=[];evWarn=null;}
 function bangUpdate(dt){bangT+=dt;
  if(bangT<.7)flash=bangT/.7;
- else{if(!run._reset){run._reset=1;run.cycle++;run.shields=Math.min(3,run.shields+1);const keep=P.v;P=newPlayer(R0);P.v=keep;run.maxStage=0;run.bossDone={};run.boss=null;run.shower=null;run.ignited=0;P.inv=3;
+ else{if(!run._reset){run._reset=1;run.cycle++;run.gasF=0;run.gasM=0;run.bank=0;run.gate=null;run.shields=Math.min(3,run.shields+1);const keep=P.v;P=newPlayer(R0);P.v=keep;run.maxStage=0;run.bossDone={};run.boss=null;run.shower=null;run.ignited=0;P.inv=3;
   const free=LAWS.filter(l=>!run.laws.includes(l.id));if(free.length){const lw=pick(rand,free);run.laws.push(lw.id);run.newLaw=lw;}
   run.seed=(rand()*4294967296)>>>0;run.gone=new Set();newCosmos(run.seed);placeStart();resetWorld();}flash=Math.max(0,1-(bangT-.7)/1.6);}
  if(bangT>2.3){delete run._reset;flash=0;state='play';banner={t:0,txt:'Big Bang',sub:run.newLaw?'New law: '+run.newLaw.n+' ('+run.newLaw.d+')':'Cycle '+run.cycle+' · perks kept'};saveRun();}}
@@ -836,8 +850,8 @@ let grid=new Map(),CS=1;
 const ck=(x,y)=>x*131071+y;
 function buildGrid(){grid.clear();CS=P.r*2;for(const o of objs){if(o.dead||o.eat>=0)continue;const k=ck(Math.floor(o.x/CS),Math.floor(o.y/CS)),a=grid.get(k);if(a)a.push(o);else grid.set(k,[o]);}}
 function near(x,y,rad,fn){const x0=Math.floor((x-rad)/CS),x1=Math.floor((x+rad)/CS),y0=Math.floor((y-rad)/CS),y1=Math.floor((y+rad)/CS);if((x1-x0+1)*(y1-y0+1)>900)return;for(let cx=x0;cx<=x1;cx++)for(let cy=y0;cy<=y1;cy++){const a=grid.get(ck(cx,cy));if(a)for(let i=0;i<a.length;i++)fn(a[i]);}}
-function spray(ix,iy,ang,m,src,bvx,bvy){const n=2+((rand()*3)|0),rf=Math.sqrt(m*.8/n);if(rf<P.r*.025||objs.length>360)return;for(let i=0;i<n;i++){const a=ang+rr(-1.1,1.1),s=P.r*rr(1.2,3.2),f=makeObj(ix,iy,rf*rr(.7,1.25));f.vx=bvx+Math.cos(a)*s;f.vy=bvy+Math.sin(a)*s;f.sp=rr(-4,4);f.frag=1;f.src=src;f.srcT=.6;objs.push(f);}}
-function chip(o,ix,iy,ang,frac){if(o.cd>0||o.r<P.r*.1)return;o.cd=.7;const m=o.r*o.r*frac;o.r=Math.sqrt(o.r*o.r-m);spray(ix,iy,ang,m,o,o.vx,o.vy);}
+function spray(ix,iy,ang,m,src,bvx,bvy){const n=2+((rand()*3)|0),rf=R3(m*.8/n),gs=src===P?(run.gasF||0):src?gasShare(src):0;if(rf<P.r*.025||objs.length>360)return;for(let i=0;i<n;i++){const a=ang+rr(-1.1,1.1),s=P.r*rr(1.2,3.2),f=makeObj(ix,iy,rf*rr(.7,1.25));f.vx=bvx+Math.cos(a)*s;f.vy=bvy+Math.sin(a)*s;f.sp=rr(-4,4);f.frag=1;f.gs=gs;f.src=src;f.srcT=.6;objs.push(f);}}
+function chip(o,ix,iy,ang,frac){if(o.cd>0||o.r<P.r*.1)return;o.cd=.7;const m=M3(o.r)*frac;o.r=R3(M3(o.r)-m);spray(ix,iy,ang,m,o,o.vx,o.vy);}
 function onScreen(x,y){const sx=(x-camX)*zoom+W/2,sy=(y-camY)*zoom+H/2;return sx>0&&sx<W&&sy>0&&sy<H;}
 function collide(a,b,nx,ny,ov){const fa=a.host||a.lm,fb=b.host||b.lm,ma=fa?1e12:a.r*a.r,mb=fb?1e12:b.r*b.r,t=ma+mb;
  if(!fa){a.x-=nx*ov*mb/t;a.y-=ny*ov*mb/t;}if(!fb){b.x+=nx*ov*ma/t;b.y+=ny*ov*ma/t;}
@@ -850,6 +864,7 @@ function stepWorld(dt,live){
  for(let i=0;i<nm;i++){mx.push(P.x+Math.cos(run.moonA+i*TAU/nm)*mD);my.push(P.y+Math.sin(run.moonA+i*TAU/nm)*mD);}
  run.binA=(run.binA||0)+dt*.9;const bx=P.x+Math.cos(run.binA)*pr*2.7,by=P.y+Math.sin(run.binA)*pr*2.7;
  buildGrid();
+ const nat=[];if(pl)for(const q of objs)if(q.host===P&&!q.dead&&q.eat<0)nat.push(q);
  for(const o of objs)o.nsat=0;for(const o of objs)if(o.host&&!o.dead)o.host.nsat=(o.host.nsat||0)+1;
  // big bodies pull smaller free bodies in: they visibly hoover up debris
  const VA2=(VR*1.15)**2,inV=o=>{const qx=o.x-P.x,qy=o.y-P.y;return qx*qx+qy*qy<VA2+o.r*o.r*9;};
@@ -857,7 +872,7 @@ function stepWorld(dt,live){
   near(a.x,a.y,rg,b=>{if(b===a||b.host||b.com||b.boss||b.lm||b.neb||b.bh||b.eat>=0||b.r>=a.r*.6||b.shedBy===a)return;const dx=a.x-b.x,dy=a.y-b.y,d2=dx*dx+dy*dy;if(d2>rg*rg)return;const d=Math.sqrt(d2)||1;
    // drifting debris at the right distance can get caught into orbit, making a new ring
    if(!b.met&&b.r<a.r*.35&&b.r>a.r*.08&&(a.nsat||0)<6&&d>a.r*1.3&&d<a.r*2.5&&rand()<dt*.45){const cr=dx*(b.vy-a.vy)-dy*(b.vx-a.vx);b.host=a;b.orbR=d;b.orbA=Math.atan2(-dy,-dx);b.orbW=(cr>0?-1:1)*rr(.5,1)*Math.pow(a.r/d,1.5)*2;b.decay=rr(.008,.03);a.nsat=(a.nsat||0)+1;if(onScreen(b.x,b.y))rings.push({ref:b,r0:1,r1:3,t:0,m:.5,col:[170,210,255],w:1.5});return;}
-   const f=acc*(1-d/rg)/d*dt;b.vx+=dx*f;b.vy+=dy*f;b.pulled=1;});}
+   const q=a.r/Math.max(d,a.r),f=acc*1.2*q*q*(1-d2/(rg*rg))/d*dt;b.vx+=dx*f;b.vy+=dy*f;b.pulled=1;});}
  for(const o of objs){if(o.dead)continue;
   if(o.eat>=0){const b=o.by;o.eat+=dt/EAT_T;if(o.eat>=1||(b!==P&&b.dead)||(b===P&&!P.alive)){o.dead=1;continue;}const t=o.eat;o.ea+=o.ew*dt*(1+t*2);const dd=o.ed*Math.pow(1-t,1.6);o.x=b.x+Math.cos(o.ea)*dd;o.y=b.y+Math.sin(o.ea)*dd;
    if(o.r0*zoom>2&&rand()<.5&&parts.length<500)parts.push({x:o.x,y:o.y,vx:0,vy:0,l:0,m:.3,c:KCOL[o.k],s:o.r0*.25,tg:b});continue;}
@@ -870,16 +885,16 @@ function stepWorld(dt,live){
   else if(o.gal){if(pl&&o.r<pr*eatFor(o)&&d2<pr*pr*.8)absorb(o,P,1);}
   else if(pl){const edible=o.r<pr*eatFor(o),threat=!edible&&o.r*EAT0>pr;
    // tidal breakup: hang too close to something 3-15x your size and it pulls you apart
-   if(threat&&!o.com&&o.r>pr*3&&o.r<pr*15&&P.inv<=0&&state==='play'){const sd=Math.sqrt(d2)-o.r,zn=o.r*.55;if(sd>0&&sd<zn){const k=(1-sd/zn)*.045*dt*tidal*lawG*(org('comet')?2:1)*Math.pow(.6,lv('armor')),m=P.r*P.r*k;if(lv('siphon')){P.r=Math.sqrt(P.r*P.r+m*.6);P.tshed=0;}else P.r=Math.sqrt(P.r*P.r-m);P.tshed=(P.tshed||0)+m;
+   if(threat&&!o.com&&o.r>pr*3&&o.r<pr*15&&P.inv<=0&&state==='play'){const sd=Math.sqrt(d2)-o.r,zn=o.r*.55;if(sd>0&&sd<zn){const k=(1-sd/zn)*.065*dt*tidal*lawG*(org('comet')?2:1)*Math.pow(.6,lv('armor')),m=M3(P.r)*k;if(lv('siphon')){grow(m*.6,gasShare(o));P.tshed=0;}else P.r=R3(M3(P.r)-m);P.tshed=(P.tshed||0)+m;
      if(rand()<.6&&parts.length<500){const a2=rand()*TAU;parts.push({x:P.x+Math.cos(a2)*P.r,y:P.y+Math.sin(a2)*P.r,vx:-dx/Math.sqrt(d2)*P.r*3,vy:-dy/Math.sqrt(d2)*P.r*3,l:0,m:.7,c:KCOL[STAGES[P.stage].k],s:P.r*.08,tg:o});}
-     if(P.tshed>(P.r*.12)**2){spray(P.x-dx/Math.sqrt(d2)*P.r,P.y-dy/Math.sqrt(d2)*P.r,Math.atan2(-dy,-dx),P.tshed,P,P.vx,P.vy);P.tshed=0;checkStage();}
+     if(P.tshed>M3(P.r)*.02){spray(P.x-dx/Math.sqrt(d2)*P.r,P.y-dy/Math.sqrt(d2)*P.r,Math.atan2(-dy,-dx),P.tshed,P,P.vx,P.vy);P.tshed=0;checkStage();}
      if(!rec.tideTip){rec.tideTip=1;saveRec();toast('🌊 Too close! Its tides are pulling you apart');}}}
    if(edible&&!o.riv&&!o.com&&!o.lm&&d2<gR2){o.host=null;const d=Math.sqrt(d2)||1;
     if(starLight&&o.r<pr*.06){const f=gA*.8*(1-d/gR)/d*dt;o.vx-=dx*f;o.vy-=dy*f;}
     else{// a mid-sized chunk can fall into orbit around you instead of straight in
-     if(o.r>pr*.1&&o.r<pr*.3&&d>pr*1.6&&P.nsat<2+lv('moonlet')+lv('ballet')&&rand()<dt*.18*(1+lv('ballet'))){const cr=dx*o.vy-dy*o.vx;o.host=P;o.orbR=d;o.orbA=Math.atan2(-dy,-dx);o.orbW=(cr>0?-1:1)*rr(.7,1)*Math.pow(pr/d,1.5)*2.4;o.decay=rr(.02,.045)*(1+lv('ballet'));P.nsat++;goalHit('capture');rings.push({ref:o,r0:1,r1:3,t:0,m:.5,col:[170,210,255],w:1.5});if(!rec.moonTip){rec.moonTip=1;saveRec();toast('🌙 Something fell into orbit around you');}}
-     else{const f=gA*(1-d/gR)/d*dt;o.vx+=dx*f;o.vy+=dy*f;o.pulled=2;}}}
-   else if(threat&&!o.com){const rg=o.r+Math.min(o.r*((o.pullR||3.6)-1),pr*10);if(d2<rg*rg){const d=Math.sqrt(d2)||1,f=pr*(o.pullS||7.5)*tidal*lawG*(1+.4*lv('assist'))*(1-d/rg)/d*dt;P.vx-=dx*f;P.vy-=dy*f;}}
+     if(o.r>pr*.1&&o.r<pr*.3&&d>pr*1.6&&P.nsat<3+lv('moonlet')+lv('ballet')&&rand()<dt*.5*(1+lv('ballet'))){const cr=dx*o.vy-dy*o.vx;o.host=P;o.orbR=d;o.orbA=Math.atan2(-dy,-dx);o.orbW=(cr>0?-1:1)*rr(.7,1)*Math.pow(pr/d,1.5)*2.4;o.decay=rr(.008,.02)*(1+lv('ballet'));P.nsat++;goalHit('capture');rings.push({ref:o,r0:1,r1:3,t:0,m:.5,col:[170,210,255],w:1.5});if(!rec.moonTip){rec.moonTip=1;saveRec();toast('A moon fell into orbit. It feeds you until it sinks in');}}
+     else{const q=pr/Math.max(d,pr),f=gA*1.5*q*q*(1-d2/gR2)/d*dt;o.vx+=dx*f;o.vy+=dy*f;o.pulled=2;}}}
+   else if(threat&&!o.com){const rg=o.r+Math.min(o.r*((o.pullR||3.6)-1),pr*10);if(d2<rg*rg){const d=Math.sqrt(d2)||1,q=o.r/Math.max(d,o.r),e=Math.max(0,d-o.r)/(rg-o.r),f=pr*(o.pullS||7.5)*tidal*lawG*(1+.4*lv('assist'))*clamp(.55*Math.sqrt(o.r/pr),.55,1.35)*q*q*(1-e*e)/d*dt;P.vx-=dx*f;P.vy-=dy*f;}}
    const rs=pr+o.r;
    if(d2<rs*rs&&!o.gal){const d=Math.sqrt(d2)||1e-6;
     if(edible){if(d<pr+o.r*.2&&!(o.src===P&&o.srcT>0))absorb(o,P,o.com?1.3:o.riv?(pact('void')?2.7:.9)*(1+.5*lv('instinct')):1);}
@@ -890,6 +905,7 @@ function stepWorld(dt,live){
     else{const nx=dx/d,ny=dy/d,ovl=rs-d,mp=pr*pr,mo=o.r*o.r,tot=mp+mo;if(P.inv<=0&&state==='play'&&Math.abs((P.vx-o.vx)*nx+(P.vy-o.vy)*ny)>pr*.9)chipPlayer(o,nx,ny,.06*chipMul());P.x+=nx*ovl*mo/tot;P.y+=ny*ovl*mo/tot;if(!o.host&&!o.lm){o.x-=nx*ovl*mp/tot;o.y-=ny*ovl*mp/tot;}if(!o.lm)o.host=null;const rv=(P.vx-o.vx)*nx+(P.vy-o.vy)*ny;
      if(rv<0){const j=-1.6*rv/tot;P.vx+=j*mo*nx;P.vy+=j*mo*ny;if(!o.lm){o.vx-=j*mp*nx;o.vy-=j*mp*ny;}
       if(-rv>pr*.45){const ix=P.x-nx*pr,iy=P.y-ny*pr;chip(o,ix,iy,Math.atan2(-ny,-nx)+(rand()<.5?-1.2:1.2),.18*(1+lv('shatter')));goalHit('chip');sparks(ix,iy,10);shake=Math.max(shake,.25);crunch(.8);}}}}
+   if(nat.length&&o.eat<0&&o.host!==P&&!o.riv&&!o.lm){for(const q of nat){const qx=q.x-o.x,qy=q.y-o.y,q2=q.r+o.r;if(o.r<q.r*1.1&&qx*qx+qy*qy<q2*q2){absorb(o,P,.8);break;}}}
    if(nm&&o.eat<0&&!o.riv&&!o.lm){for(let j=0;j<nm;j++){const qx=mx[j]-o.x,qy=my[j]-o.y,q=mR+o.r;if(qx*qx+qy*qy<q*q){if(o.r<mR*1.1){absorb(o,P,.8);break;}if(syn('roche')&&o.cd<=0){chip(o,mx[j],my[j],Math.atan2(-qy,-qx),.15);sparks(mx[j],my[j],5);break;}}}}
    if(lv('binary')&&o.eat<0&&!o.riv&&!o.lm&&o.r<pr*.4){const qx=bx-o.x,qy=by-o.y,q=pr*.32+o.r;if(qx*qx+qy*qy<q*q)absorb(o,P,.8);}
    if(lv('horizon')&&o.eat<0&&!o.lm&&!o.riv&&o.r<pr/3&&d2<gR2*.85)absorb(o,P,1);}
@@ -908,6 +924,10 @@ function stepWorld(dt,live){
  fillField(false);
  if(pl&&state==='play'){run.cometT-=dt;if(run.cometT<=0){run.cometT=rr(9,20)*(run.cycle>1?.7:1);spawnComet(VR);}}}
 
+// ---------- growth and composition. Mass is volume; run.gasF is the share of you that is gas (hydrogen, helium).
+const CRUMB_K=10;
+function gasShare(o){if(o.gs!=null)return o.gs;if(o.neb||o.k==='nebula')return 1;if(o.k==='gas'||o.k==='brown')return .9;if(o.k==='star'||o.k==='blue'||o.k==='wdwarf')return .85;if(o.k==='ice'||o.k==='comet')return .1;return 0;}
+function grow(m,gs){if(!(m>0))return;const M=M3(P.r);run.gasF=((run.gasF||0)*M+gs*m)/(M+m);run.gasM=(run.gasM||0)+gs*m;P.r=R3(M+m);}
 // ---------- golden bodies: rare glinting debris, worth stardust when you swallow it
 let floaters=[];
 function goldFound(o){discover('gold');const d=2+Math.floor(P.stage/3)+2*(run.cycle-1);run.bonusDust=(run.bonusDust||0)+d;run.golds=(run.golds||0)+1;floaters.push({x:o.x,y:o.y,t:0,txt:'+'+d});rings.push({ref:P,r0:1,r1:3.2,t:0,m:.6,col:[243,181,98],w:2});
@@ -923,9 +943,9 @@ function spawnBoss(bd){const VR=viewR(),a=rand()*TAU,o=makeObj(P.x+Math.cos(a)*V
 function bossWin(o){const bd=o.boss.d;if(RELICS[bd.id]&&!relic(bd.id)){run.relics.push(bd.id);setTimeout(()=>toast('Relic: '+RELICS[bd.id].n+'. '+RELICS[bd.id].d),2600);}run.boss=null;run.bossWins=(run.bossWins||0)+1;discover('boss:'+bd.id);pendingPicks++;pickDelay=Math.max(pickDelay,1.4);banner={t:0,txt:'Swallowed!',sub:bd.name+' is yours. Bonus evolution.'};rings.push({ref:P,r0:1,r1:12,t:0,m:1.5,col:bd.col,w:5});burst(P.x,P.y,bd.k,40,null,1.6);chime();}
 function bossStep(dt){if(run.fin)return;const bd=BOSSES.find(b=>b.stage===P.stage);if(bd&&!run.boss&&!run.bossDone[bd.id]&&stageF(P.r)-P.stage>.3)spawnBoss(bd);
  const o=run.boss;if(!o)return;if(o.dead||o.eat>=0){run.boss=null;return;}const b=o.boss;b.t+=dt;const dx=P.x-o.x,dy=P.y-o.y,d=Math.hypot(dx,dy)||1;
- const hunting=o.r*EAT0>P.r,shrinking=o.r>P.r*eatRatio()*.97;if(b.t<b.lim){const loss=shrinking?o.r*o.r*.03*dt:0;o.r=Math.sqrt(o.r*o.r-loss);b.shed+=loss;
-  if(b.shed>(P.r*.18)**2){const m=b.shed;b.shed=0;const a=rand()*TAU,f=makeObj(o.x+Math.cos(a)*o.r,o.y+Math.sin(a)*o.r,Math.sqrt(m)*rr(.8,1));f.vx=o.vx+Math.cos(a)*P.r*2.5;f.vy=o.vy+Math.sin(a)*P.r*2.5;f.shedBy=o;objs.push(f);}
-  const sp=hunting?P.r*2.3:d>viewR()*.7?P.r*1.2:-P.r*.8,k=Math.min(1,dt*1.5);o.vx+=(dx/d*sp-o.vx)*k;o.vy+=(dy/d*sp-o.vy)*k;
+ const hunting=o.r*EAT0>P.r,shrinking=o.r>P.r*eatRatio()*.97;if(b.t<b.lim){const loss=shrinking?M3(o.r)*.065*dt:0;o.r=R3(M3(o.r)-loss);b.shed+=loss;
+  if(b.shed>M3(P.r*.2)){const m=b.shed;b.shed=0;const a=rand()*TAU,f=makeObj(o.x+Math.cos(a)*o.r,o.y+Math.sin(a)*o.r,R3(m)*rr(.8,1));f.vx=o.vx+Math.cos(a)*P.r*2.5;f.vy=o.vy+Math.sin(a)*P.r*2.5;f.shedBy=o;objs.push(f);}
+  const spent=o.r<P.r*eatRatio(),sp=hunting?P.r*2.3:spent?-P.r*.25:d>viewR()*.7?P.r*1.2:-P.r*.8,k=Math.min(1,dt*1.5);o.vx+=(dx/d*sp-o.vx)*k;o.vy+=(dy/d*sp-o.vy)*k;
   if(bd&&b.d.flare){b.ft-=dt;if(b.ft<=0){b.ft=b.d.flare;shocks.push({x:o.x,y:o.y,ref:o,r:o.r,max:o.r*6,spd:P.r*14,str:9,chip:0,col:[255,120,80]});tone(120,.8,'sawtooth',.12,60);}}}
  else{if(!b.left){b.left=1;toast(b.d.name+' gave up the chase');}const k=Math.min(1,dt);o.vx+=(-dx/d*P.r*3-o.vx)*k;o.vy+=(-dy/d*P.r*3-o.vy)*k;if(d>viewR()*1.2||b.t>b.lim+12){o.dead=1;run.boss=null;}}}
 // ---------- space events
@@ -933,7 +953,7 @@ function eventStep(dt){const VR=viewR();if(run.fin)return;
  if(run.shower){const sh=run.shower;sh.t+=dt;while(sh.n<sh.t*9&&sh.n<36){sh.n++;const a=sh.a+rr(-.35,.35),x=P.x+Math.cos(a)*VR*1.1,y=P.y+Math.sin(a)*VR*1.1,o=makeObj(x,y,P.r*rr(.08,.32)),tx=P.x+rr(-.5,.5)*VR-x,ty=P.y+rr(-.5,.5)*VR-y,tl=Math.hypot(tx,ty),sp=P.r*rr(5,7);o.vx=tx/tl*sp;o.vy=ty/tl*sp;o.met=1;o.sp=rr(-3,3);objs.push(o);}if(sh.n>=36)run.shower=null;}
  if(evWarn){evWarn.t+=dt;const so=evWarn.obj;if(so){if(so.dead||so.eat>=0){evWarn=null;}else{evWarn.x=so.x;evWarn.y=so.y;}}}
  if(evWarn&&evWarn.t>=evWarn.m&&evWarn.flare){const dd=Math.hypot(evWarn.x-P.x,evWarn.y-P.y);shocks.push({x:evWarn.x,y:evWarn.y,r:Math.max(0,dd-VR*1.2),max:dd+VR*1.6,spd:VR*1.3,str:7,chip:0,col:[255,205,130]});flash=Math.max(flash,.12);tone(90,1.2,'sine',.3,40);evWarn=null;}
- if(evWarn&&evWarn.t>=evWarn.m){{const so=evWarn.obj;if(so){so.dead=1;spray(so.x,so.y,rand()*TAU,so.r*so.r*.5,so,so.vx,so.vy);spray(so.x,so.y,rand()*TAU,so.r*so.r*.3,so,so.vx,so.vy);burst(so.x,so.y,so.k,30,null,2);}shocks.push({x:evWarn.x,y:evWarn.y,r:so?so.r:VR*.3,max:VR*(evWarn.far?3.2:2.2),spd:VR*1.1,str:10,chip:1,col:[220,235,255]});flash=Math.max(flash,evWarn.far?.18:.35);shake=Math.max(shake,.8);tone(50,1.5,'sine',.5,28);tone(160,.9,'sawtooth',.1,40);evWarn=null;}}
+ if(evWarn&&evWarn.t>=evWarn.m){{const so=evWarn.obj;if(so){so.dead=1;spray(so.x,so.y,rand()*TAU,M3(so.r)*.5,so,so.vx,so.vy);spray(so.x,so.y,rand()*TAU,M3(so.r)*.3,so,so.vx,so.vy);burst(so.x,so.y,so.k,30,null,2);}shocks.push({x:evWarn.x,y:evWarn.y,r:so?so.r:VR*.3,max:VR*(evWarn.far?3.2:2.2),spd:VR*1.1,str:10,chip:1,col:[220,235,255]});flash=Math.max(flash,evWarn.far?.18:.35);shake=Math.max(shake,.8);tone(50,1.5,'sine',.5,28);tone(160,.9,'sawtooth',.1,40);evWarn=null;}}
  run.evT-=dt;if(run.evT>0||run.boss||evWarn||run.shower)return;run.evT=rr(45,80);
  const opts=[['shower',.4]];if(P.stage>=10)opts.push(['nova',.35]);if(P.stage>=8)opts.push(['hole',P.stage>=13?.55:.25]);if(P.stage>=2&&P.stage<=9&&lightSrc&&Math.hypot(lightSrc.x-P.x,lightSrc.y-P.y)<VR*6)opts.push(['flare',.35]);let x=rand()*opts.reduce((a,o)=>a+o[1],0),type='shower';for(const o of opts){x-=o[1];if(x<=0){type=o[0];break;}}
  if(type==='flare'){const L=lightSrc,dd=Math.hypot(L.x-P.x,L.y-P.y);evWarn={flare:1,far:dd>VR*.9?1:0,x:L.x,y:L.y,t:0,m:2,sr:HOME?struct.get([...struct.keys()].find(k=>k.endsWith('*'))||''):null};toast('Solar flare incoming','bad');tone(140,1.8,'sine',.12,260);}
@@ -953,7 +973,7 @@ function anomStep(dt){const VR=viewR();if(run.fin){finaleStep(dt);return;}run.an
   if(t==='worm'){anoms.push({t,x:ax,y:ay,r:P.r*1.3,life:26,age:0});toast('A wormhole has opened nearby','good');}
   if(Q.get('anomhere'))setTimeout(()=>{const an=anoms[anoms.length-1];if(an)an.age=+Q.get('anomage')||1.5;},0);
   if(t==='merge'){anoms.push({t,x:ax,y:ay,r:P.r*.55,ph:rand()*TAU,life:8,age:0});toast('Two black holes are spiralling together','bad');tone(70,2,'sine',.15,140);}
-  if(t==='neb'){const m=P.r*P.r*rr(.9,1.3);anoms.push({t,x:ax,y:ay,r:P.r*rr(5,7),m,m0:m,sd:rand()*99,life:45,age:0});toast('A nebula is drifting nearby','good');}
+  if(t==='neb'){const m=M3(P.r)*rr(.9,1.3);anoms.push({t,x:ax,y:ay,r:P.r*rr(5,7),m,m0:m,sd:rand()*99,life:45,age:0});toast('A nebula is drifting nearby','good');}
   if(t==='sig'){anoms.push({t,x:ax,y:ay,r:P.r*.9,life:30,age:0});toast('A strange signal is pulsing nearby','good');}
   if(t==='dm'){anoms.push({t,x:ax,y:ay,r:P.r*7,life:32,age:0});crumbBurst(ax,ay,P.r*5,46);toast('Dark matter is bending space nearby','good');}
   if(t==='geyser'){anoms.push({t,x:ax,y:ay,r:P.r*.6,ang:rand()*TAU,life:16,age:0});toast('An ice geyser is erupting nearby','good');}
@@ -966,7 +986,7 @@ function anomStep(dt){const VR=viewR();if(run.fin){finaleStep(dt);return;}run.an
   if(an.t==='worm'&&P.alive&&d<an.r+P.r*.4&&an.age>.6){an.life=0;wormExit(VR);camX=P.x;camY=P.y;flash=Math.max(flash,.3);P.inv=Math.max(P.inv,2.5);crumbBurst(P.x,P.y,P.r*6,60);for(let i=0;i<10;i++){const q=makeObj(P.x+rr(-6,6)*P.r,P.y+rr(-6,6)*P.r,P.r*rr(.08,.5));objs.push(q);}toast('Through the wormhole');tone(200,1,'sine',.25,1200);}
   if(an.t==='merge'){const k=clamp(an.age/6,0,1);an.sep=an.r*3.2*(1-k*k);if(P.alive&&d<an.r*9&&an.age<6){const f=P.r*2.2*k*(1-d/(an.r*9))/(d||1)*dt;P.vx-=dx*f;P.vy-=dy*f;}
    if(an.age>=6&&!an.boom){an.boom=1;shocks.push({x:an.x,y:an.y,r:an.r,max:P.r*15,spd:P.r*22,str:10,chip:1,col:[255,96,80]});for(let i=0;i<4;i++)rings.push({ref:{x:an.x,y:an.y,r:an.r},r0:1+i*.6,r1:10+i*3,t:-i*.15,m:1.6,col:[255,110,90],w:2,wave:1});flash=Math.max(flash,.15);shake=Math.max(shake,.8);tone(45,1.6,'sine',.4,600);if(P.alive&&d<an.r*10&&P.inv<=0)chipPlayer({r:P.r*2,vx:0,vy:0},dx/(d||1),dy/(d||1),.1);}}
-  if(an.t==='neb'){const rN=an.r*Math.sqrt(Math.max(.12,an.m/an.m0));if(P.alive&&d<rN&&an.m>0){P.nebAt=simT;const take=Math.min(an.m,P.r*P.r*.11*dt*gainMult()/GAIN);an.m-=take;P.r=Math.sqrt(P.r*P.r+take);P.lastEat=simT;if(rand()<dt*30&&parts.length<480){const a=rand()*TAU,q=rN*rr(.3,1);parts.push({x:an.x+Math.cos(a)*q,y:an.y+Math.sin(a)*q,vx:0,vy:0,l:0,m:.4,c:[159,216,255],s:P.r*.06,tg:P});}checkStage();}if(an.m<=0)an.life=Math.min(an.life,an.age+1);}
+  if(an.t==='neb'){const rN=an.r*Math.sqrt(Math.max(.12,an.m/an.m0));if(P.alive&&d<rN&&an.m>0){P.nebAt=simT;const take=Math.min(an.m,M3(P.r)*.16*dt*gainMult()/GAIN);an.m-=take;grow(take,1);P.lastEat=simT;if(rand()<dt*30&&parts.length<480){const a=rand()*TAU,q=rN*rr(.3,1);parts.push({x:an.x+Math.cos(a)*q,y:an.y+Math.sin(a)*q,vx:0,vy:0,l:0,m:.4,c:[159,216,255],s:P.r*.06,tg:P});}checkStage();}if(an.m<=0)an.life=Math.min(an.life,an.age+1);}
   if(an.t==='sig'&&P.alive&&d<an.r+P.r){an.life=0;pendingPicks++;pickDelay=.4;rings.push({ref:P,r0:1,r1:8,t:0,m:1,col:[159,216,255],w:3});tone(880,.6,'triangle',.15,1320);}
   if(an.t==='dm'&&P.alive&&d<an.r){const f=P.r*3.5*(1-d/an.r)/(d||1)*dt;P.vx-=dx*f;P.vy-=dy*f;for(const c of crumbs){const qx=an.x-c.x,qy=an.y-c.y,ql=Math.hypot(qx,qy);if(ql<an.r){c.vx+=qx/ql*P.r*dt*2-qy/ql*P.r*dt*1.5;c.vy+=qy/ql*P.r*dt*2+qx/ql*P.r*dt*1.5;}}}
   if(an.t==='geyser'&&rand()<dt*14){const a=an.ang+rr(-.25,.25),c=mkCrumb(an.x,an.y,[[235,244,255],[205,228,248]]);c.vx=Math.cos(a)*P.r*rr(3,6);c.vy=Math.sin(a)*P.r*rr(3,6);c.r*=1.4;crumbs.push(c);}
@@ -1011,7 +1031,7 @@ addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=1;if(e.key===' '){tryDa
 addEventListener('keyup',e=>{keys[e.key.toLowerCase()]=0;});
 function tryDash(){return;if(state!=='play'||!lv('dash')||P.dashCd>0||!P.alive)return;const l=Math.hypot(P.fx,P.fy)||1;P.vx=P.fx/l*P.r*15;P.vy=P.fy/l*P.r*15;P.dashT=.3;P.dashCd=dashCdMax();tone(500,.25,'triangle',.2,1200);}
 function autopilot(){let ax=0,ay=0;const er=eatRatio(),lim=(P.r*14)**2;for(const o of objs){if(o.eat>=0)continue;const dx=o.x-P.x,dy=o.y-P.y,d2=dx*dx+dy*dy+1;if(d2>lim&&!(o.r>P.r&&d2<(o.r+P.r*14)**2))continue;const d=Math.sqrt(d2);
-  if(o.r<P.r*er){const w=(o.r*o.r)/(P.r*P.r)/Math.pow(d/P.r,1.5);ax+=dx/d*w;ay+=dy/d*w;}else if(o.r*EAT0>P.r){const reach=o.r+P.r*(o.riv&&o.riv.mode==='chase'?9:4);if(d<reach){const q=(reach-d)/(P.r*4);const w=3*q*q;ax-=dx/d*w;ay-=dy/d*w;}}}
+  if(o.r<P.r*er){const w=(o.r*o.r)/(P.r*P.r)/Math.pow(d/P.r,1.5)*(run.gate&&run.gate.gas&&gasShare(o)>.5?8:1);ax+=dx/d*w;ay+=dy/d*w;}else if(o.r*EAT0>P.r){const reach=o.r+P.r*(o.riv&&o.riv.mode==='chase'?9:4);if(d<reach){const q=(reach-d)/(P.r*4);const w=3*q*q;ax-=dx/d*w;ay-=dy/d*w;}}}
  const l=Math.hypot(ax,ay);if(l<1e-4){const a=Math.atan2(P.fy,P.fx)+rr(-.3,.3);return[Math.cos(a),Math.sin(a)];}return[ax/l,ay/l];}
 function updatePlayer(dt,auto){let ix=0,iy=0,im=0;
  if(auto){const a=autopilot();ix=a[0]*.85;iy=a[1]*.85;im=.85;}
@@ -1029,7 +1049,7 @@ function updatePlayer(dt,auto){let ix=0,iy=0,im=0;
  const sk=SKINS.find(x=>x.id===rec.skin);if(sk&&sk.col&&state==='play'&&parts.length<500&&Math.hypot(P.vx,P.vy)>P.r*.8){const c=sk.col==='rainbow'?[127+127*Math.sin(simT*3),127+127*Math.sin(simT*3+2.1),127+127*Math.sin(simT*3+4.2)]:sk.col,a=rand()*TAU;parts.push({x:P.x-P.vx*.08+Math.cos(a)*P.r*.4,y:P.y-P.vy*.08+Math.sin(a)*P.r*.4,vx:-P.vx*.25,vy:-P.vy*.25,l:0,m:.6,c,s:P.r*rr(.12,.25),tg:null});}
  if(state==='play'&&pact('hunger')&&simT-(P.lastEat||simT)>3){P.r*=Math.sqrt(1-.012*dt);P.hT=(P.hT||0)+dt;if(P.hT>1){P.hT=0;checkStage();}}
  if(state==='play'&&relic('wrath')){P.wT=(P.wT||0)+dt;if(P.wT>10){P.wT=0;shocks.push({x:P.x,y:P.y,ref:P,r:P.r,max:P.r*7,spd:P.r*16,str:9,chip:0,self:1,col:[255,120,80]});tone(120,.6,'sawtooth',.1,60);}}
- if(state==='play'&&P.stage===11){const k=.011*dt*Math.pow(.6,lv('armor'));P.r*=Math.sqrt(1-k);if(parts.length<500){const a=rand()*TAU;parts.push({x:P.x+Math.cos(a)*P.r,y:P.y+Math.sin(a)*P.r,vx:Math.cos(a)*P.r*4,vy:Math.sin(a)*P.r*4,l:0,m:.5,c:[170,200,255],s:P.r*.06,tg:null});}P.windT=(P.windT||0)+dt;if(P.windT>1){P.windT=0;checkStage();}}
+ if(state==='play'&&P.stage===11){const k=.004*dt*Math.pow(.6,lv('armor'));P.r*=Math.sqrt(1-k);if(parts.length<500){const a=rand()*TAU;parts.push({x:P.x+Math.cos(a)*P.r,y:P.y+Math.sin(a)*P.r,vx:Math.cos(a)*P.r*4,vy:Math.sin(a)*P.r*4,l:0,m:.5,c:[170,200,255],s:P.r*.06,tg:null});}P.windT=(P.windT||0)+dt;if(P.windT>1){P.windT=0;checkStage();}}
  if((P.stage===13||P.stage===14)&&state!=='title'&&parts.length<480)for(let i=0;i<2;i++){const a=rand()*TAU,d=P.r*rr(1.25,2.3);parts.push({x:P.x+Math.cos(a)*d,y:P.y+Math.sin(a)*d,vx:-Math.sin(a)*P.r*5+P.vx,vy:Math.cos(a)*P.r*5+P.vy,l:0,m:rr(.4,.8),c:rand()<.5?[255,190,110]:[255,240,210],s:P.r*.05,tg:P});}
  P.pulse=Math.max(0,(P.pulse||0)-dt*3);P.chipCd=Math.max(0,(P.chipCd||0)-dt);P.inv=Math.max(0,P.inv-dt);P.dashCd=Math.max(0,P.dashCd-dt);if(P.stage===12)P.a+=dt*2.4;else if(P.stage===14){const ta=Math.atan2(-P.fx,P.fy);let da=ta-P.a;da=Math.atan2(Math.sin(da),Math.cos(da));P.a+=da*Math.min(1,dt*6);}else P.a+=dt*.25;}
 
@@ -1103,6 +1123,7 @@ function render(t){
    if((P.stage===13||P.stage===14)&&P.alive&&o.r<pr*eatFor(o)&&!o.lm){const dd=Math.hypot(o.x-P.x,o.y-P.y),k=clamp(1-(dd-pr)/(pr*1.6),0,1);if(k>0){g.save();g.translate(x,y);g.rotate(Math.atan2(P.y-o.y,P.x-o.x));g.scale(1+k*.9,1-k*.45);drawBody(o.k,o.v,0,0,rs,0);g.restore();continue;}}
    drawObjBody(o,x,y,rs,litAngle(o));
    if(o.gold)glint(x,y,rs,t,o.id);
+   if(run&&run.gate&&run.gate.gas&&playing&&o.r<pr*eatFor(o)&&gasShare(o)>.5){g.strokeStyle='rgba(159,216,255,.7)';g.lineWidth=1;g.setLineDash([3,4]);g.beginPath();g.arc(x,y,rs+Math.max(4,rs*.15),t*.4,t*.4+TAU);g.stroke();g.setLineDash([]);}
    if((o.k==='hole'||o.k==='quasar')&&rs>4)holeFx(x,y,rs,t,o.id);
    if(o.boss){const c=o.boss.d.col;g.strokeStyle=rgba(c,.45+.3*Math.sin(t*4));g.lineWidth=3;g.beginPath();g.arc(x,y,rs*1.2,0,TAU);g.stroke();g.textAlign='center';g.font='italic 600 19px Cormorant, Georgia, serif';g.fillStyle=rgba(c,.95);g.fillText(o.boss.d.name,Math.round(x),Math.round(y-rs*1.25-10));}
    if(o.bh){g.strokeStyle='rgba(190,120,255,'+(.35+.2*Math.sin(t*3))+')';g.lineWidth=2;g.beginPath();g.arc(x,y,rs*2.1,0,TAU);g.stroke();}
@@ -1199,7 +1220,7 @@ function railPos(i,stg){const n=LAST,cur=.42,oth=(1-cur)/(n-1);return i<=stg?i*o
 function massHTML(r){const t=massText(r),m=t.match(/^([\d.]+) × 10(\S+) kg$/);if(!m)return t;return m[1]+'×10<sup>'+m[2].split('').map(c=>SUP.indexOf(c)).join('')+'</sup> kg';}
 function hud(){if(frame%6)return;const bo=run.boss;$('bossbar').classList.toggle('hidden',!bo);
  if(bo){const ratio=bo.r/P.r,edible=bo.r<P.r*eatRatio();$('bossname').textContent=bo.boss.d.name;$('bossstate').textContent=bo.boss.left?'leaving':edible?'swallow it now':ratio.toFixed(1)+'× your size';$('bossf').style.transform='scaleX('+clamp(1-bo.boss.t/bo.boss.lim,0,1).toFixed(3)+')';}
- {const g=run.goal;$('gtext').textContent=goalText(g);$('gprog').textContent=g?(g.done?'done':g.p+' of '+g.n):'';$('goal').classList.toggle('done',!!(g&&g.done));}
+ {const g=run.goal,G=run.gate;if(G){const live=run.chN&&simT-run.chT<CHAIN_T?run.chN:0;$('gtext').textContent=G.txt;$('gprog').textContent=G.gas?Math.min(99,Math.floor(gateProg(G,P.stage+1)*100))+'%':live+' of '+G.chain;}else{$('gtext').textContent=goalText(g);$('gprog').textContent=g?(g.done?'done':g.p+' of '+g.n):'';}$('goal').classList.toggle('done',!G&&!!(g&&g.done));$('goal').classList.toggle('gate',!!G);}
  $('sname').textContent=STAGES[P.stage].n;$('cyc').textContent=(run.drift?'drift':'')+(run.drift&&run.cycle>1?' · ':'')+(run.cycle>1?'cycle '+run.cycle:'');$('snext').textContent=P.stage<LAST?STAGES[P.stage+1].n:'';$('smass').innerHTML=massHTML(P.r);
  const stg=Math.min(P.stage,LAST-1),rail=$('rail');
  if(railStage!==stg&&rail.querySelectorAll){if(!rail.querySelector('.tk'))for(let i=0;i<=LAST;i++){const t=document.createElement('span');t.className='tk';rail.insertBefore(t,rail.firstChild);}
@@ -1218,6 +1239,14 @@ function bindSnd(){on('bSnd',()=>{rec.muted=!rec.muted;saveRec();$('bSnd').class
 
 function thumb(cn,k,v,lock){const S=Math.round(64*Math.min(2,DPR));cn.width=cn.height=S;const c=cn.getContext('2d'),sp=getSprite(k,v,48),d=sp.size*(S*.36/sp.b);c.drawImage(sp.c,(S-d)/2,(S-d)/2,d,d);if(lock){c.globalCompositeOperation='source-in';c.fillStyle='#3a4060';c.fillRect(0,0,S,S);}}
 // Journey plate: every stage on one gold line, a little specimen of each one you reached, the furthest ringed.
+// ---------- true scale: real diameters (metres) at the start of each stage. Gameplay doubles your size every stage;
+// the real jumps are wildly uneven, and a neutron star or black hole is far smaller than the star it came from.
+const REAL_D=[.034,.15,1.4,920,2.38e6,3.47e6,1.27e7,2.2e7,1.4e8,1.4e8,1.39e9,1.4e10,2e4,3e6,6e12,9.5e20,4.9e24,8.8e26];
+const LIKE=[[.03,'a marble'],[.22,'a football'],[1.6,'a fridge'],[12,'a bus'],[120,'a cathedral'],[1500,'a small town'],[2e4,'a city'],[6e4,'Greater London'],[2.5e5,'Wales'],[1.2e6,'Great Britain, end to end'],[2.38e6,'Pluto'],[3.47e6,'the Moon'],[6.8e6,'Mars'],[1.27e7,'Earth'],[5e7,'Neptune'],[1.4e8,'Jupiter'],[1.39e9,'the Sun'],[1.4e10,'ten Suns in a row'],[3e11,'Earth\'s orbit'],[9e12,'Neptune\'s orbit'],[9.5e15,'a light-year'],[1e18,'a star cluster'],[9.5e20,'the Milky Way'],[3e22,'our Local Group of galaxies'],[4.9e24,'the Laniakea Supercluster'],[8.8e26,'the observable universe']];
+function realD(r){const sf=Math.max(0,stageF(r)),i=Math.min(LAST,Math.floor(sf));if(i>=LAST)return REAL_D[LAST];return REAL_D[i]*Math.pow(REAL_D[i+1]/REAL_D[i],sf-i);}
+function fmtLen(m){const ly=9.461e15;if(m<1)return Math.round(m*100)+' cm';if(m<1000)return(m<10?m.toFixed(1):Math.round(m))+' m';if(m<ly*.05){const km=m/1000;return km<1e7?Math.round(km).toLocaleString()+' km':fmtSci(km)+' km';}const l=m/ly;return l<1e6?Math.round(l).toLocaleString()+' light-years':l<1e9?(l/1e6).toFixed(l<1e7?1:0)+' million light-years':(l/1e9).toFixed(0)+' billion light-years';}
+function fmtSci(v){const e=Math.floor(Math.log10(v));return(v/Math.pow(10,e)).toFixed(1)+'×10'+String(e).split('').map(d=>SUP[+d]).join('');}
+function realLine(r){const d=realD(r);let best=LIKE[0],bd=1e9;for(const q of LIKE){const e=Math.abs(Math.log(d/q[0]));if(e<bd){bd=e;best=q;}}return'Real size: <b>'+fmtLen(d)+'</b> across, '+(bd<.5?'about the size of ':d>best[0]?'bigger than ':'smaller than ')+best[1]+'.';}
 function drawPlate(cn,reached){const cw=cn.clientWidth||340,ch=58,S=Math.min(3,DPR);cn.width=Math.round(cw*S);cn.height=Math.round(ch*S);const c=cn.getContext('2d');c.setTransform(S,0,0,S,0,0);
  const pad=12,y=26,xs=i=>pad+(cw-2*pad)*i/LAST,rad=i=>2.2+5.6*Math.pow(i/LAST,.85);
  c.strokeStyle='rgba(243,181,98,.18)';c.lineWidth=1;c.beginPath();c.moveTo(xs(0),y+.5);c.lineTo(xs(LAST),y+.5);c.stroke();
@@ -1252,7 +1281,9 @@ function startRun(sv,daily,origin,drift){daily=false;run=freshRun();if(drift)run
  else if(Q.get('stage'))r=R0*Math.pow(STEP,+Q.get('stage')+.05);
  P=newPlayer(r);if(sv)P.stage=sv.stage;shocks=[];evWarn=null;
  if(!sv){run.daily=daily?dateKey():null;run.seed=daily?hashStr('accrete-'+run.daily):(rand()*4294967296)>>>0;}
- newCosmos(run.seed);if(sv&&sv.px!=null){P.x=sv.px;P.y=sv.py;cosT=sv.cosT||0;}else placeStart();resetWorld();pendingPicks=sv?sv.pend||0:0;pickDelay=.6;
+ newCosmos(run.seed);if(sv&&sv.px!=null){P.x=sv.px;P.y=sv.py;cosT=sv.cosT||0;}else placeStart();resetWorld();
+ // a saved spot can now be inside a planet (orbits changed, or the world moved on): step somewhere safe
+ if(sv){for(const o of objs){if(!o.dead&&o.r>=P.r*eatFor(o)&&Math.hypot(o.x-P.x,o.y-P.y)<o.r+P.r*3){wormExit(viewR());camX=P.x;camY=P.y;fillField(true);break;}}P.inv=Math.max(P.inv,3);}pendingPicks=sv?sv.pend||0:0;pickDelay=.6;
  run.maxStage=Math.max(run.maxStage||0,P.stage);
  if(!sv&&Q.get('cycle'))run.cycle=+Q.get('cycle');if(!sv&&Q.get('maxperks'))for(const k in PERKS)if(PW[k]!==0&&k!=='crust')run.perks[k]=PERKS[k].max;
  if(!sv||!run.goal)newGoal();
@@ -1278,7 +1309,7 @@ function showPick(reroll){state='pick';if(!reroll)pendingPicks--;touch.on=false;
  on('bReroll',()=>{if(run.rerolls<=0)return;run.rerolls--;showPick(true);});
  if(Q.has('demo'))setTimeout(()=>takePerk(opts[0]),500);}
 function takePerk(k){if(state!=='pick')return;if(k.startsWith('pact:')){run.pacts.push(k.slice(5));k='__';}else run.perks[k]=(run.perks[k]||0)+1;if(k==='crust')run.shields=Math.min(3,run.shields+1);hideOv();state='play';P.inv=Math.max(P.inv,2);
- if(k==='stardust'){P.r*=Math.sqrt(1.15);checkStage();}if(k==='lucky')run.rerolls++;checkSyn();if(pendingPicks>0)pickDelay=Math.max(pickDelay,.35);saveRun();}
+ if(k==='stardust'){P.r*=Math.cbrt(1.15);checkStage();}if(k==='lucky')run.rerolls++;checkSyn();if(pendingPicks>0)pickDelay=Math.max(pickDelay,.35);saveRun();}
 const KN={dust:'grains of dust',ice:'icy chunks',pebble:'pebbles',stone:'stones',boulder:'boulders',asteroid:'asteroids',dwarf:'dwarf planets',moon:'moons',planet:'planets',super:'super-Earths',gas:'gas giants',brown:'brown dwarfs',star:'stars',blue:'blue giants',neutron:'neutron stars',hole:'black holes',quasar:'quasars',galaxy:'galaxies',nebula:'gas clouds',comet:'comets'};
 function newGoal(){const s=P.stage,R=rand,opts=[];const fk=s<2?(zoneP.t==='ring'?'ice':'dust'):STAGES[Math.min(16,s-2)].k;opts.push({t:'eat',k:fk,n:6+((R()*4)|0)});
  opts.push({t:'dust',n:80+((R()*4)|0)*20});opts.push({t:'chip',n:3+((R()*3)|0)});opts.push({t:'sling',n:2+((R()*2)|0)});opts.push({t:'rival',n:1+((R()*2)|0)});
@@ -1292,17 +1323,17 @@ function pause(){if(state!=='play')return;state='paused';touch.on=false;saveRun(
 function pauseOv(){const L=[];if(run.origin){const o=ORIGINS.find(x=>x.id===run.origin);L.push(['dense',o.n,o.d.split('.')[0]+'.']);}
  for(const k of run.relics)L.push([RELICS[k].ic,RELICS[k].n,RELICS[k].d]);for(const k of run.syn){const sy=SYN.find(x=>x.id===k);L.push(['rich',sy.n,sy.d]);}
  for(const k of run.pacts)L.push([PACTS[k].ic,PACTS[k].n,PACTS[k].dn]);for(const id of run.laws){const l=LAWS.find(x=>x.id===id);L.push(['lens',l.n,l.d[0].toUpperCase()+l.d.slice(1)+'.']);}
- showOv('<div class="psub">Paused</div><canvas class="plate" id="plate"></canvas>'+(L.length?'<div class="runlog">'+L.map(r=>'<div>'+svgI(r[0])+'<span><b>'+r[1]+'</b>'+r[2]+'</span></div>').join('')+'</div>':'')+'<button class="btn pri" id="bRes">Resume</button><button class="btn" id="bMenuP">Main menu</button><button class="btn" id="bAlb">Album</button><button class="btn quiet" id="bQuit">Abandon run</button>'+sndBtns());
+ showOv('<div class="psub">Paused</div><canvas class="plate" id="plate"></canvas><div class="rec" style="margin:-10px 0 16px">'+realLine(P.r)+'</div>'+(L.length?'<div class="runlog">'+L.map(r=>'<div>'+svgI(r[0])+'<span><b>'+r[1]+'</b>'+r[2]+'</span></div>').join('')+'</div>':'')+'<button class="btn pri" id="bRes">Resume</button><button class="btn" id="bMenuP">Main menu</button><button class="btn" id="bAlb">Album</button><button class="btn quiet" id="bQuit">Abandon run</button>'+sndBtns());
  drawPlate($('plate'),Math.max(P.stage,run.maxStage||0));on('bRes',()=>{hideOv();state='play';P.inv=Math.max(P.inv,.8);});on('bMenuP',()=>{saveRun();showTitle();});on('bAlb',()=>showAlbum(pauseOv));on('bQuit',()=>{finishRun();clearSave();showTitle();});bindSnd();}
 function showOver(){overShown=true;$('hud').classList.add('hidden');
  showOv('<div class="kick">Swallowed by '+killer+'</div><h2>'+STAGES[Math.max(P.stage,run.maxStage||0)].n+'</h2>'+(run.cycle>1?'<div class="kick" style="margin:-12px 0 18px">cycle '+run.cycle+'</div>':'')+
   '<div class="stats"><div><b>'+fmtTime(run.time)+'</b><span>time</span></div><div><b>'+run.eaten.toLocaleString()+'</b><span>swallowed</span></div><div><b>'+massHTML(P.peak)+'</b><span>at your peak</span></div></div>'+
-  '<canvas class="plate" id="plate"></canvas><div class="nb">'+svgI('stardust')+'+'+(run.dustEarned||0)+' stardust'+(newBest?', and a new best':'')+'</div>'+(newBest?'':'<div class="rec" style="margin:0 0 14px">Your best: <b>'+rec.bestName+'</b>'+(rec.bestCycle>1?' in cycle '+rec.bestCycle:'')+'</div>')+
+  '<canvas class="plate" id="plate"></canvas><div class="rec" style="margin:-10px 0 14px">'+realLine(P.peak).replace('Real size:','At your peak:')+'</div><div class="nb">'+svgI('stardust')+'+'+(run.dustEarned||0)+' stardust'+(newBest?', and a new best':'')+'</div>'+(newBest?'':'<div class="rec" style="margin:0 0 14px">Your best: <b>'+rec.bestName+'</b>'+(rec.bestCycle>1?' in cycle '+rec.bestCycle:'')+'</div>')+
   (run.daily?'<button class="btn" id="bShare">Share today\'s run</button>':'')+'<button class="btn pri" id="bAgain">Play again</button><button class="btn" id="bMenu">Main menu</button>');
  drawPlate($('plate'),Math.max(P.stage,run.maxStage||0));
  on('bShare',()=>{const txt='Accrete daily '+run.daily+': reached '+STAGES[Math.max(P.stage,run.maxStage||0)].n+(run.cycle>1?' (cycle '+run.cycle+')':'')+', swallowed '+run.eaten.toLocaleString()+' in '+fmtTime(run.time)+'. https://akuforge.com/accrete/';if(navigator.share)navigator.share({text:txt}).catch(()=>{});else if(navigator.clipboard)navigator.clipboard.writeText(txt).then(()=>toast('Copied to clipboard'));});
  on('bAgain',()=>startRun(null,!!run.daily));on('bMenu',showTitle);if(Q.has('demo'))setTimeout(()=>startRun(null),1500);}
-function saveRun(){if(!P||!P.alive||!(state==='play'||state==='pick'||state==='paused'))return;try{localStorage.setItem(SV,JSON.stringify({r:P.r,stage:P.stage,pend:pendingPicks+(state==='pick'?1:0),px:P.x,py:P.y,cosT,run:{seed:run.seed,daily:run.daily,gone:[...run.gone],laws:run.laws,ignited:run.ignited,goal:run.goal,bonusDust:run.bonusDust,origin:run.origin,pacts:run.pacts,relics:run.relics,syn:run.syn,rerolls:run.rerolls,maxStage:Math.max(P.stage,run.maxStage||0),bossWins:run.bossWins||0,bossDone:run.bossDone,perks:run.perks,shields:run.shields,phoenixUsed:run.phoenixUsed,cycle:run.cycle,time:run.time,eaten:run.eaten,drift:run.drift||0,golds:run.golds||0}}));}catch(e){}}
+function saveRun(){if(!P||!P.alive||!(state==='play'||state==='pick'||state==='paused'))return;try{localStorage.setItem(SV,JSON.stringify({r:P.r,stage:P.stage,pend:pendingPicks+(state==='pick'?1:0),px:P.x,py:P.y,cosT,run:{seed:run.seed,daily:run.daily,gone:[...run.gone],laws:run.laws,ignited:run.ignited,goal:run.goal,bonusDust:run.bonusDust,origin:run.origin,pacts:run.pacts,relics:run.relics,syn:run.syn,rerolls:run.rerolls,maxStage:Math.max(P.stage,run.maxStage||0),bossWins:run.bossWins||0,bossDone:run.bossDone,perks:run.perks,shields:run.shields,phoenixUsed:run.phoenixUsed,cycle:run.cycle,time:run.time,eaten:run.eaten,gasF:run.gasF||0,gasM:run.gasM||0,bank:run.bank||0,drift:run.drift||0,golds:run.golds||0}}));}catch(e){}}
 $('bPause').addEventListener('click',e=>{e.stopPropagation();pause();});
 document.addEventListener('visibilitychange',()=>{if(document.hidden){saveRun();pause();try{if(AC)AC.suspend();if(silentEl)silentEl.pause();}catch(e){}}});
 addEventListener('pagehide',saveRun);
@@ -1315,7 +1346,7 @@ function loop(now){let dt=(now-last)/1000;last=now;if(!(dt>0))dt=0;if(dt>.05)dt=
  tScale+=((state==='pick'?.12:1)-tScale)*Math.min(1,dt*(state==='pick'?7:2.4));
  if(state==='pick'){const sd=dt*tScale;P.inv=Math.max(P.inv,1);run.time+=sd;updatePlayer(sd,false);stepShocks(sd);stepWorld(sd,true);stepCrumbs(sd,true);camera(sd);stepParts(sd);cosT+=sd;structPos();}
  if(state==='play'||state==='title'||state==='dead'||state==='bang'){const dt0=dt;dt=state==='play'?dt*tScale:dt;cosT+=dt;cosTk-=dt;if(cosTk<=0){cosTk=.2;cosmosTick();}structPos();}
- if(state==='play'){run.time+=dt;updatePlayer(dt,Q.has('demo'));bossStep(dt);eventStep(dt);anomStep(dt);stepShocks(dt);stepWorld(dt,true);stepCrumbs(dt,true);camera(dt);stepParts(dt);hud();
+ if(state==='play'){run.time+=dt;updatePlayer(dt,Q.has('demo'));gateCheck();bossStep(dt);eventStep(dt);anomStep(dt);stepShocks(dt);stepWorld(dt,true);stepCrumbs(dt,true);camera(dt);stepParts(dt);hud();
   if(pendingPicks>0&&state==='play'){pickDelay-=dt;if(pickDelay<=0)showPick();}
   run.saveT-=dt;if(run.saveT<=0){run.saveT=4;saveRun();}}
  else if(state==='title'){updatePlayer(dt,true);stepWorld(dt,true);stepCrumbs(dt,true);camera(dt);stepParts(dt);if(needAttract){needAttract=false;attract();}}
