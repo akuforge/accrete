@@ -177,7 +177,7 @@ h2{font:600 clamp(40px,12vw,60px)/1 var(--serif);margin:6px 0 20px}
 const $=id=>document.getElementById(id);
 const cv=$('c'),ov=$('ov');let g=cv.getContext('2d');
 const Q=new URLSearchParams(location.search);
-const BUILD='2026-10-16.21';
+const BUILD='2026-10-16.23';
 let W=0,H=0,DPR=1;
 function resize(){DPR=Math.min(window.devicePixelRatio||1,3);let w=window.innerWidth,h=window.innerHeight;
  // iOS home-screen apps can report a viewport shorter than the screen (a black strip at the bottom): take the largest honest height
@@ -492,7 +492,7 @@ function freshRun(){return{origin:null,pacts:[],relics:[],syn:[],rerolls:2,laws:
 function targetZoom(){const prog=clamp(stageF(P.r)-P.stage,0,1);return Math.min(W,H)*(.052+.03*prog)/(1+.18*lv('lens'))*(hasLaw('dim')?1.12:1)/P.r;}
 function resetWorld(){objs=[];parts=[];crumbs=[];anoms=[];struct.clear();camX=P.x;camY=P.y;zoom=targetZoom();cosmosTick();fillField(true);}
 
-function rollSize(z){const R=P.r,st=P.stage,pT=Math.min(.3,(.075+.008*st+.035*(run.cycle-1)+(hasLaw('hostile')?.06:0))*(z&&z.t==='ring'?.5:z&&z.t==='void'?.6:1)),u=rand();
+function rollSize(z){const R=P.r,st=P.stage,pT=Math.min(.3,(.075+.005*st+.035*(run.cycle-1)+(hasLaw('hostile')?.06:0))*(z&&z.t==='ring'?.5:z&&z.t==='void'?.6:1)),u=rand();
  if(u<pT)return R*(1.2+Math.pow(rand(),1.6)*2.6);
  if(u<pT+.07)return R*rr(.85,1.15);
  return R*(.04+.62*Math.pow(rand(),2.1));}
@@ -505,7 +505,7 @@ function spawnBody(x,y,r,z){z=z||{t:'space'};
  if((z.t==='ring'||(z.t==='oort'&&rand()<.5))&&stageOf(r)<=4)o.k='ice';
  if(z.hx!=null){const dx=x-z.hx,dy=y-z.hy,d=Math.hypot(dx,dy)||1,sp=P.r*(z.t==='ring'?rr(.25,.45):rr(.12,.3))*z.dir;o.vx=z.hvx-dy/d*sp+rr(-.05,.05)*P.r;o.vy=z.hvy+dx/d*sp+rr(-.05,.05)*P.r;}
  if(z.t==='void'&&z.w.node){const dx=z.w.node[0]-x,dy=z.w.node[1]-y,d=Math.hypot(dx,dy)||1;o.vx+=dx/d*P.r*.5;o.vy+=dy/d*P.r*.5;}
- if(r>P.r*.6&&rand()<(stageOf(r)>=10?.6:.3)){const k=1+((rand()*3)|0);let orb=r*rr(1.5,1.9);for(let i=0;i<k;i++){const sr=r*rr(.1,.28);orb+=sr*2+r*rr(.1,.5);const q=makeObj(x,y,sr);q.host=o;q.orbR=orb;q.orbA=rand()*TAU;q.orbW=(rand()<.5?-1:1)*rr(.5,1.1)*Math.pow(r/orb,1.5)*2;q.decay=rand()<.5?rr(.003,.012):0;q.x=x+Math.cos(q.orbA)*orb;q.y=y+Math.sin(q.orbA)*orb;objs.push(q);n++;}}
+ if(r>P.r*.6&&(o.k==='gas'||o.k==='planet'||o.k==='super')&&rand()<.12){const k=1+((rand()*2)|0);let orb=r*rr(1.5,1.9);for(let i=0;i<k;i++){const sr=r*rr(.1,.28);orb+=sr*2+r*rr(.1,.5);const q=makeObj(x,y,sr);q.host=o;q.orbR=orb;q.orbA=rand()*TAU;q.orbW=(rand()<.5?-1:1)*rr(.5,1.1)*Math.pow(r/orb,1.5)*2;q.decay=rand()<.5?rr(.003,.012):0;q.x=x+Math.cos(q.orbA)*orb;q.y=y+Math.sin(q.orbA)*orb;objs.push(q);n++;}}
  return n;}
 const HUES=[[255,90,200],[90,220,255],[180,255,90],[255,200,60],[170,120,255],[255,130,90]];
 function makeRival(x,y,r){const o=makeObj(x,y,r);o.riv={col:pick(rand,HUES),th:0,tx:x,ty:y,mode:'wander'};return o;}
@@ -519,7 +519,7 @@ function fillField(initial){const VR=viewR(),A=VR*1.45;let n=0,rv=0;for(const o 
  if(rv<rt&&(initial||rand()<.02)){const ang=rand()*TAU,d=rr(VR*1.1,A);objs.push(makeRival(P.x+Math.cos(ang)*d,P.y+Math.sin(ang)*d,P.r*rr(.5,1.7)));}}
 // ---------- cosmos: one nested universe, generated around you on demand, identical for a given seed.
 // Fixed sizes: you start in a gas giant's ring, inside a solar system, in a galaxy's spiral arm, on the cosmic web.
-const CSYS=300000,CGAL=3000000,CWEB=14000000;
+const CSYS=250000,CGAL=3000000,CWEB=14000000;
 let SEED=1,cosT=0,HOME=null,activeSys=[],lightSrc=null,zoneP={t:'space'},cosTk=0;const galCache=new Map(),sysCache=new Map(),struct=new Map();
 const szSt=st=>R0*Math.pow(STEP,st);
 function h32(){let h=(SEED^0x9e3779b9)>>>0;for(let i=0;i<arguments.length;i++){h=Math.imul(h^(arguments[i]|0),0x85ebca6b);h^=h>>>13;h=Math.imul(h,0xc2b2ae35);h^=h>>>16;}return h>>>0;}
@@ -609,16 +609,25 @@ function holeFx(x,y,rs,t,seed,me){const tilt=((seed*0.618)%1-.5)*.8,sp=me?1.6:1;
  for(let i=0;i<4;i++){const R=rs*(1.05+i*.2),a0=t*sp*(1.9-i*.35)+i*1.3;g.strokeStyle='rgba(255,'+(170+i*15)+','+(110+i*25)+','+(.32-i*.06)+')';g.lineWidth=Math.max(1,rs*(.07-i*.012));g.beginPath();g.ellipse(0,0,R,R*.3,0,a0,a0+Math.PI*1.2);g.stroke();}
  g.restore();g.globalCompositeOperation='lighter';const sh=.45+.25*Math.sin(t*3+seed);g.strokeStyle='rgba(235,225,255,'+sh+')';g.lineWidth=Math.max(1,rs*.025);g.beginPath();g.arc(x,y,rs*.76,0,TAU);g.stroke();
  g.strokeStyle='rgba(190,170,255,'+(.12+.06*Math.sin(t*1.3+seed))+')';g.lineWidth=1;g.setLineDash([2,5]);g.beginPath();g.arc(x,y,rs*(me?2.4:1.9),t*.2,t*.2+TAU);g.stroke();g.setLineDash([]);g.globalCompositeOperation='source-over';}
-function drawLabels(z,ox,oy){const L=[];for(const o of struct.values()){if(o.dead||o.eat>=0)continue;const x=o.x*z+ox,y=o.y*z+oy,rs=o.r*z;if(rs<4||rs>300||x<-rs||x>W+rs||y<-rs||y>H+rs)continue;L.push([Math.hypot(o.x-P.x,o.y-P.y),o,x,y,rs]);}
- L.sort((a,b)=>a[0]-b[0]);g.font='italic 600 15px Cormorant, Georgia, serif';g.textAlign='left';g.textBaseline='middle';const placed=[],top=hudBottom()+8;
- for(const [,o,x,y,rs] of L.slice(0,9)){const nm=bodyName(o),tw=g.measureText(nm).width,ax=Math.round(x+rs*.72)+.5,ay=Math.round(y-rs*.72)+.5,bx=ax+16,by=ay-16,box=[bx+8,by-10,bx+14+tw,by+10];
+function drawLabels(z,ox,oy){const C=[],top=hudBottom()+8,on=(x,y,m)=>x>-m&&x<W+m&&y>-m&&y<H+m;
+ for(const o of struct.values()){if(o.dead||o.eat>=0)continue;const x=o.x*z+ox,y=o.y*z+oy,rs=o.r*z,d=o.def;if(rs<3||rs>320||!on(x,y,rs))continue;
+  const big=d.t==='star'||d.t==='gal';C.push({pr:d.t==='star'?0:d.t==='gal'?1:d.t==='pl'?2:4,x,y,rs,t:bodyName(o),sub:d.t==='star'?(d.s.sv<0?'blue giant system':'system'):d.t==='gal'?'galaxy':'',col:big?GOLD:'242,238,227',big});}
+ for(const o of objs){if(!o.riv||o.dead||o.eat>=0)continue;const x=o.x*z+ox,y=o.y*z+oy,rs=o.r*z;if(rs<4||!on(x,y,rs))continue;C.push({pr:3,x,y,rs,t:genName('rv'+o.id),col:'255,156,146'});}
+ for(const an of anoms){const x=an.x*z+ox,y=an.y*z+oy;if(an.t==='grb'||!on(x,y,0))continue;C.push({pr:3,x,y,rs:Math.max(6,an.r*z*.5),t:an.t==='worm'?'Wormhole':an.t==='sig'?'Strange signal':'Dark matter',col:'159,216,255'});}
+ C.sort((a,b)=>a.pr-b.pr||Math.hypot(a.x-W/2,a.y-H/2)-Math.hypot(b.x-W/2,b.y-H/2));const placed=[];g.textAlign='left';g.textBaseline='middle';
+ for(const c of C.slice(0,14)){g.font=c.big?'600 18px Cormorant, Georgia, serif':'italic 600 15px Cormorant, Georgia, serif';const tw=g.measureText(c.t).width,ax=Math.round(c.x+c.rs*.72)+.5,ay=Math.round(c.y-c.rs*.72)+.5,bx=ax+16,by=ay-16,box=[bx+8,by-11,bx+14+tw,by+(c.sub?24:11)];
   if(box[1]<top||box[2]>W-6||placed.some(q=>!(box[2]<q[0]||box[0]>q[2]||box[3]<q[1]||box[1]>q[3])))continue;placed.push(box);
-  g.strokeStyle='rgba('+GOLD+',.5)';g.lineWidth=1;g.beginPath();g.moveTo(ax,ay);g.lineTo(bx,by);g.lineTo(bx+8,by);g.stroke();g.fillStyle='rgba(242,238,227,.9)';g.fillText(nm,Math.round(bx+11),Math.round(by));}g.textBaseline='alphabetic';}
+  g.strokeStyle='rgba('+c.col+','+(c.big?.6:.42)+')';g.lineWidth=1;g.beginPath();g.moveTo(ax,ay);g.lineTo(bx,by);g.lineTo(bx+8,by);g.stroke();
+  g.fillStyle='rgba('+c.col+','+(c.big?.95:.82)+')';g.fillText(c.t,Math.round(bx+11),Math.round(by));if(c.sub){g.font='italic 500 13px Cormorant, Georgia, serif';g.fillStyle='rgba(140,147,184,.85)';g.fillText(c.sub,Math.round(bx+11),Math.round(by+15));}}
+ // belts get their name written along the arc, like a chart
+ g.textAlign='center';for(const st of activeSys){if(!st.belt)continue;const sx=st.x*z+ox,sy=st.y*z+oy,R1=st.belt.a*z;if(R1<70)continue;let a=Math.atan2(camY-st.y,camX-st.x),px=0,py=0,ok=false;const pxp=P.x*z+ox,pyp=P.y*z+oy;for(const da of [0,.12,-.12,.24,-.24,.36,-.36,.5,-.5]){const aa=a+da*Math.min(1,300/R1)*3;px=sx+Math.cos(aa)*R1;py=sy+Math.sin(aa)*R1;if(on(px,py,-30)&&py>=top&&Math.hypot(px-pxp,py-pyp)>P.r*z*2.6+40){a=aa;ok=true;break;}}if(!ok)continue;
+  let rot=a+Math.PI/2;if(Math.cos(rot)<0)rot+=Math.PI;g.save();g.translate(Math.round(px),Math.round(py));g.rotate(rot);g.font='italic 600 14px Cormorant, Georgia, serif';g.fillStyle='rgba('+GOLD+',.55)';g.fillText(genName(st.id)+' Belt',0,-8);g.restore();}
+ g.textBaseline='alphabetic';}
 let hudB=0,hudBT=0;function hudBottom(){if(simT-hudBT>.5||!hudB){hudBT=simT;const h=$('hud');hudB=h&&!h.classList.contains('hidden')&&h.getBoundingClientRect?h.getBoundingClientRect().bottom:0;}return hudB||0;}
 function circleOnScreen(cx,cy,R){if(cx+R<0||cx-R>W||cy+R<0||cy-R>H)return false;const fx=Math.max(Math.abs(cx),Math.abs(cx-W)),fy=Math.max(Math.abs(cy),Math.abs(cy-H));return Math.hypot(fx,fy)>R-2;}
 function drawSystems(z,ox,oy){for(const st of activeSys){const sx=st.x*z+ox,sy=st.y*z+oy;
   for(const pl of st.planets){const R1=pl.orb*z;if(R1<15||R1>4e5||!circleOnScreen(sx,sy,R1))continue;atlasRing(sx,sy,R1,.26,72,0,false);const o=struct.get(pl.id);if(o&&!o.dead&&o.eat<0){const px=o.x*z+ox,py=o.y*z+oy;g.strokeStyle='rgba('+GOLD+',.6)';g.beginPath();g.arc(px,py,Math.max(3,pl.r*z+5),0,TAU);g.stroke();}}
-  if(st.belt){const R1=st.belt.a*z,wd=st.belt.w*z;if(R1>10&&R1<4e5&&circleOnScreen(sx,sy,R1+wd)){g.strokeStyle='rgba(210,190,160,.04)';g.lineWidth=Math.max(1,wd*2);g.beginPath();g.arc(sx,sy,R1,0,TAU);g.stroke();atlasRing(sx,sy,R1-wd,.14,0,0,true);atlasRing(sx,sy,R1+wd,.14,0,0,true);}}
+  if(st.belt){const R1=st.belt.a*z,wd=st.belt.w*z;if(R1>10&&R1<4e5&&circleOnScreen(sx,sy,R1+wd)){{const Rb=mulberry(hashStr(st.id+'belt')),N=Math.min(900,Math.max(80,R1*.9|0)),rot=cosT*14/st.belt.a;for(let i=0;i<N;i++){const a=Rb()*TAU+rot,rr0=R1+(Rb()+Rb()-1)*wd,px=sx+Math.cos(a)*rr0,py=sy+Math.sin(a)*rr0,sz=.8+Rb()*1.8;if(px<-3||px>W+3||py<-3||py>H+3)continue;g.fillStyle=Rb()<.5?'rgba(200,185,160,.75)':'rgba(160,150,140,.7)';g.fillRect(px-sz/2,py-sz/2,sz,sz);}}g.strokeStyle='rgba(210,190,160,.04)';g.lineWidth=Math.max(1,wd*2);g.beginPath();g.arc(sx,sy,R1,0,TAU);g.stroke();atlasRing(sx,sy,R1-wd,.14,0,0,true);atlasRing(sx,sy,R1+wd,.14,0,0,true);}}
   for(const pl of st.planets){const o=struct.get(pl.id);if(!o||o.dead||o.eat>=0)continue;const px=o.x*z+ox,py=o.y*z+oy,r0=pl.r*z;
    for(const m of pl.moons){const R1=m.orb*z;if(R1>12&&R1<4e5&&circleOnScreen(px,py,R1))atlasRing(px,py,R1,.2,36,0,false);}
    if(pl.ring&&r0>1.5&&circleOnScreen(px,py,r0*2.2)){g.strokeStyle='rgba(225,235,250,.085)';g.lineWidth=r0*1.04;g.beginPath();g.arc(px,py,r0*1.58,0,TAU);g.stroke();g.lineWidth=Math.max(1,r0*.03);g.strokeStyle='rgba(235,240,255,.1)';for(const q of [1.22,1.48,1.82]){g.beginPath();g.arc(px,py,r0*q,0,TAU);g.stroke();}}}}}
@@ -690,7 +699,7 @@ function absorb(o,by,mult){if(o.eat>=0)return;o.eat=0;o.by=by;o.host=null;if(o.s
  if(by===P){P.lastEat=simT;if(o.frag&&o.src!==P)mult*=1+.4*lv('scav');if(state==='play')goalEat(o);run.eatN=(run.eatN||0)+1;if(lv('spiral')&&run.eatN%15===0)crumbBurst(P.x,P.y,P.r*3,24);if(lv('chain')&&o.r>P.r*.5&&state==='play')shocks.push({x:P.x,y:P.y,ref:P,r:P.r,max:P.r*8,spd:P.r*22,str:6,chip:1,self:1,col:[255,205,140]});if(state!=='title')discover(codexKey(o));if(o.boss)bossWin(o);if(o.neb)mult*=1.6;
  if(P.stage>=12&&(o.k==='hole'||o.k==='quasar')&&o.r>P.r*.3&&state==='play'){mult*=1.3;for(let i=0;i<4;i++)rings.push({ref:P,r0:1+i*.6,r1:9+i*2,t:-i*.15,m:1.6,col:[200,175,255],w:2,wave:1});shocks.push({x:P.x,y:P.y,ref:P,r:P.r,max:P.r*12,spd:P.r*18,str:8,chip:0,self:1,col:[190,160,255]});shake=Math.max(shake,.7);tone(60,1.3,'sine',.35,700);toast('Black holes merged. Spacetime rippled.');}
  if(P.stage>=13&&(o.k==='star'||o.k==='blue'||o.k==='neutron')&&state==='play'){mult*=1.3;const col=KCOL[o.k];for(let i=0;i<46&&parts.length<500;i++){const f=i/46,a=Math.atan2(o.y-P.y,o.x-P.x)+f*4.2,d=Math.hypot(o.x-P.x,o.y-P.y)*(1-f*.6)+P.r*.5;parts.push({x:P.x+Math.cos(a)*d,y:P.y+Math.sin(a)*d,vx:-Math.sin(a)*P.r*4,vy:Math.cos(a)*P.r*4,l:-f*.5,m:1.3,c:col,s:P.r*rr(.05,.12),tg:P});}}if(o.gal)mult*=1.2;P.r=Math.sqrt(P.r*P.r+o.r*o.r*mult*gainMult());P.peak=Math.max(P.peak,P.r);run.eaten++;if(state==='play')popSound(o.r/P.r);burst(o.x,o.y,o.k,2+Math.min(5,(o.r/P.r*10)|0),P,.6);if(o.r>P.r*.45)rings.push({ref:P,r0:1,r1:1.9,t:0,m:.45,col:KCOL[o.k],w:2.5});checkStage();}
- else{if(mult>0&&!(by.riv&&by.r>P.r*1.8)){by.r=Math.sqrt(by.r*by.r+o.r*o.r*mult);if(!by.com&&!by.lm&&!by.boss&&!by.bh)setKind(by,kindOf(by.r));}if(o.r>P.r*.3)burst(o.x,o.y,o.k,3,by,.6);}}
+ else{if(mult>0&&!(by.riv&&by.r>P.r*1.8)){by.r=Math.sqrt(by.r*by.r+o.r*o.r*mult);}if(o.r>P.r*.3)burst(o.x,o.y,o.k,3,by,.6);}}
 // bodies that grow or shrink into a new type keep a similar colour and cross-fade instead of popping
 const AVG=new Map();
 function colorOf(k,v){const key=k+v;if(AVG.has(key))return AVG.get(key);const sp=getSprite(k,v,24);let c=KCOL[k]||[150,150,150];try{const d=sp.c.getContext('2d').getImageData(0,0,sp.size,sp.size).data;let r=0,gg=0,b=0,n=0;for(let i=0;i<d.length;i+=16){if(d[i+3]>200){r+=d[i];gg+=d[i+1];b+=d[i+2];n++;}}if(n)c=[r/n,gg/n,b/n];}catch(e){}AVG.set(key,c);return c;}
@@ -742,7 +751,7 @@ const ck=(x,y)=>x*131071+y;
 function buildGrid(){grid.clear();CS=P.r*2;for(const o of objs){if(o.dead||o.eat>=0)continue;const k=ck(Math.floor(o.x/CS),Math.floor(o.y/CS)),a=grid.get(k);if(a)a.push(o);else grid.set(k,[o]);}}
 function near(x,y,rad,fn){const x0=Math.floor((x-rad)/CS),x1=Math.floor((x+rad)/CS),y0=Math.floor((y-rad)/CS),y1=Math.floor((y+rad)/CS);if((x1-x0+1)*(y1-y0+1)>900)return;for(let cx=x0;cx<=x1;cx++)for(let cy=y0;cy<=y1;cy++){const a=grid.get(ck(cx,cy));if(a)for(let i=0;i<a.length;i++)fn(a[i]);}}
 function spray(ix,iy,ang,m,src,bvx,bvy){const n=2+((rand()*3)|0),rf=Math.sqrt(m*.8/n);if(rf<P.r*.025||objs.length>360)return;for(let i=0;i<n;i++){const a=ang+rr(-1.1,1.1),s=P.r*rr(1.2,3.2),f=makeObj(ix,iy,rf*rr(.7,1.25));f.vx=bvx+Math.cos(a)*s;f.vy=bvy+Math.sin(a)*s;f.sp=rr(-4,4);f.frag=1;f.src=src;f.srcT=.6;objs.push(f);}}
-function chip(o,ix,iy,ang,frac){if(o.cd>0||o.r<P.r*.1)return;o.cd=.7;const m=o.r*o.r*frac;o.r=Math.sqrt(o.r*o.r-m);if(!o.com&&!o.boss&&!o.bh&&!o.lm)setKind(o,kindOf(o.r));spray(ix,iy,ang,m,o,o.vx,o.vy);}
+function chip(o,ix,iy,ang,frac){if(o.cd>0||o.r<P.r*.1)return;o.cd=.7;const m=o.r*o.r*frac;o.r=Math.sqrt(o.r*o.r-m);spray(ix,iy,ang,m,o,o.vx,o.vy);}
 function onScreen(x,y){const sx=(x-camX)*zoom+W/2,sy=(y-camY)*zoom+H/2;return sx>0&&sx<W&&sy>0&&sy<H;}
 function collide(a,b,nx,ny,ov){const fa=a.host||a.lm,fb=b.host||b.lm,ma=fa?1e12:a.r*a.r,mb=fb?1e12:b.r*b.r,t=ma+mb;
  if(!fa){a.x-=nx*ov*mb/t;a.y-=ny*ov*mb/t;}if(!fb){b.x+=nx*ov*ma/t;b.y+=ny*ov*ma/t;}
