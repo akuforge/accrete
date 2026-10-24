@@ -182,11 +182,34 @@ h2{font:600 clamp(40px,12vw,60px)/1 var(--serif);margin:6px 0 20px}
 .row b{font-size:21px}.row b small{font-size:14px}.row>span>small{font-size:15px}.shead{font-size:21px}.rar{font-size:18px}
 .runlog div{font-size:15px}.runlog b{font-size:20px}
 }
+/* iPhone Duo (Adam's phone since 2026-10-23). JS sets html.duo + duo-closed|duo-open + duo-land|duo-port (+ duo-side when the status bar is not along the top, duo-book when Safari reports the hinge as folded).
+   Closed: the outer screen is wider and shorter than an iPhone's and the system keeps its controls on the trailing edge, so the HUD starts near the top and its buttons stack down the side (in every pose, so they never move).
+   Open: same type sizes (Apple: keep text consistent across poses), a wider instrument column, and two-page menus in landscape whose gutter sits on the hinge. */
+html.duo .hbtns{flex-direction:column;margin-left:auto}
+html.duo-side #hud{padding-top:calc(env(safe-area-inset-top) + 14px)}
+html.duo-open #hud{padding-left:calc(env(safe-area-inset-left) + 26px);padding-right:calc(env(safe-area-inset-right) + 26px)}
+html.duo-open .inst,html.duo-open #perks,html.duo-open #bossbar{max-width:440px}
+html.duo-open .tile{max-width:136px;min-height:124px}
+html.duo-open .ptiles{width:min(560px,95vw)}
+.ov.two{flex-direction:row;align-items:center;gap:0;padding-left:calc(env(safe-area-inset-left) + 16px);padding-right:calc(env(safe-area-inset-right) + 16px)}
+.ov.two>.pg{flex:1 1 0;min-width:0;max-height:100%;overflow-y:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;align-items:center;padding:0 28px;box-sizing:border-box}
+.ov.two>.pg>:first-child{margin-top:auto}.ov.two>.pg>:last-child{margin-bottom:auto}
+.ov.two .rec,.ov.two .runlog{max-width:360px}
+.ov.two .btn{width:min(300px,100%)}
+html.duo-closed .ov.two>.pg{padding:0 12px}
+html.duo-land .ov.mapov{flex-direction:row;justify-content:flex-end;align-items:flex-end;gap:14px;padding-right:calc(env(safe-area-inset-right) + 18px)}
+html.duo-land .ov.mapov .maptabs{flex-direction:column;align-items:stretch;margin:0;flex-wrap:nowrap}
+html.duo-land .ov.mapov .btn{width:auto}
+html.duo-book.duo-land #toast{right:50%}
+html.duo-book.duo-land .ptiles{width:min(860px,96vw)}
+html.duo-book.duo-land .ptiles:before{content:'';order:2;flex:0 0 64px}
+html.duo-book.duo-land .ptiles>:nth-child(n+2){order:3}
 @media (prefers-reduced-motion:reduce){.card,.rail .tk,#railseg,#toast{transition:none}}
 </style>
 </head>
 <body>
 <div id="safeprobe" style="position:fixed;top:0;left:0;width:1px;height:env(safe-area-inset-top);visibility:hidden;pointer-events:none"></div>
+<div id="insprobe" style="position:fixed;left:0;top:0;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);visibility:hidden;pointer-events:none"></div>
 <div id="vprobe" style="position:fixed;left:0;top:0;width:1px;height:100vh;height:100lvh;visibility:hidden;pointer-events:none"></div>
 <canvas id="c"></canvas>
 <div id="hud" class="hidden">
@@ -211,14 +234,30 @@ h2{font:600 clamp(40px,12vw,60px)/1 var(--serif);margin:6px 0 20px}
 const $=id=>document.getElementById(id);
 const cv=$('c'),ov=$('ov');let g=cv.getContext('2d');
 const Q=new URLSearchParams(location.search);
-const BUILD='2026-10-17.40';
+const BUILD='2026-10-24.41';
 let W=0,H=0,DPR=1;
 function resize(){DPR=Math.min(window.devicePixelRatio||1,3);let w=window.innerWidth,h=window.innerHeight;
  // iOS home-screen apps can report a viewport shorter than the screen (a black strip at the bottom): take the largest honest height
  const pr=document.getElementById('vprobe');if(pr)h=Math.max(h,pr.getBoundingClientRect().height);h=Math.max(h,document.documentElement.clientHeight||0,window.visualViewport?window.visualViewport.height:0);
  const sa=navigator.standalone||(window.matchMedia&&matchMedia('(display-mode: standalone)').matches);
  if(sa&&window.screen&&screen.width){const port=h>=w,sw=port?Math.min(screen.width,screen.height):Math.max(screen.width,screen.height),sh=port?Math.max(screen.width,screen.height):Math.min(screen.width,screen.height);if(Math.abs(sw-w)<4&&sh>h)h=sh;}
- W=w;H=h;cv.width=Math.round(W*DPR);cv.height=Math.round(H*DPR);cv.style.width=W+'px';cv.style.height=H+'px';}
+ W=w;H=h;cv.width=Math.round(W*DPR);cv.height=Math.round(H*DPR);cv.style.width=W+'px';cv.style.height=H+'px';duoCheck();}
+// iPhone Duo: outer screen 466x678 pt, inner 626x890 pt, both @3x (Apple tech specs, 2026-10). ?duo=closed|open forces a pose for testing
+const DUO_D={closed:[466,678],open:[626,890]};let duoPose='',poseT=0,diagTm=0;
+function detectDuo(){const f=Q.get('duo');if(f==='closed'||f==='open')return f;if(!/iPhone/.test(navigator.userAgent)||Math.abs((window.devicePixelRatio||1)-3)>.1||!window.screen)return'';
+ const a=Math.min(screen.width,screen.height),b=Math.max(screen.width,screen.height);for(const k in DUO_D)if(Math.abs(a-DUO_D[k][0])<4&&Math.abs(b-DUO_D[k][1])<4)return k;return'';}
+function insets(){const e=document.getElementById('insprobe');if(!e||typeof getComputedStyle!=='function')return[0,0,0,0];const c=getComputedStyle(e);return[c.paddingTop,c.paddingRight,c.paddingBottom,c.paddingLeft].map(v=>parseFloat(v)||0);}
+function duoCheck(){const was=duoPose;duoPose=detectDuo();const cl=document.documentElement.classList,ins=insets();
+ let book=false;try{book=(navigator.devicePosture&&navigator.devicePosture.type==='folded')||matchMedia('(horizontal-viewport-segments: 2)').matches;}catch(_){}
+ cl.toggle('duo',!!duoPose);cl.toggle('duo-closed',duoPose==='closed');cl.toggle('duo-open',duoPose==='open');cl.toggle('duo-land',!!duoPose&&W>H);cl.toggle('duo-port',!!duoPose&&W<=H);cl.toggle('duo-side',!!duoPose&&ins[0]<20);cl.toggle('duo-book',!!duoPose&&book);
+ // folding or unfolding mid-run: a moment of slow motion and safety while the view re-frames
+ try{if(was&&duoPose&&was!==duoPose&&P&&state==='play'){poseT=1.6;P.inv=Math.max(P.inv,2.2);}if(!ov.classList.contains('hidden'))reflowOv();}catch(_){}// before the game state exists
+ clearTimeout(diagTm);diagTm=setTimeout(duoDiag,1500);}
+try{if(navigator.devicePosture)navigator.devicePosture.addEventListener('change',duoCheck);}catch(_){}
+// one report per pose to the hub's access log, so the real Duo's numbers can be checked: docker logs aku-hub | grep accdiag. Tailnet copy only, never the public site
+function duoDiag(){try{if(!/\.ts\.net$/.test(location.hostname)||!/iPhone/.test(navigator.userAgent))return;const k='accrete.diag.'+BUILD+'.'+(duoPose||'none')+'.'+(W>H?'l':'p');if(localStorage.getItem(k))return;localStorage.setItem(k,'1');
+ const i=insets(),p=new URLSearchParams({accdiag:1,b:BUILD,pose:duoPose||'none',sw:screen.width,sh:screen.height,iw:innerWidth,ih:innerHeight,W:Math.round(W),H:Math.round(H),dpr:devicePixelRatio,ins:i.join(','),sa:navigator.standalone?1:0,post:navigator.devicePosture?navigator.devicePosture.type:'-',seg:matchMedia('(horizontal-viewport-segments: 2)').matches?'h2':matchMedia('(vertical-viewport-segments: 2)').matches?'v2':'1',ua:navigator.userAgent.slice(0,180)});
+ fetch('/__diag?'+p,{cache:'no-store'}).catch(()=>{});}catch(_){}}
 if(document.fonts&&document.fonts.load){document.fonts.load('600 40px Cormorant');document.fonts.load('italic 600 20px Cormorant');}
 window.addEventListener('resize',resize);window.addEventListener('orientationchange',()=>setTimeout(resize,300));if(window.visualViewport)visualViewport.addEventListener('resize',resize);resize();setTimeout(resize,300);setTimeout(resize,1200);
 window.__errs=[];window.addEventListener('error',e=>{window.__errs.push(e.message+' @'+e.lineno);console.error('ACCRETE-ERR',e.message,e.lineno);});
@@ -610,7 +649,10 @@ const jetMode=()=>P.stage===12?1:(P.stage===14||(P.stage===13&&lv('jets')))?2:0,
 const viewR=()=>Math.hypot(W,H)/2/zoom;
 function newPlayer(r){return{x:0,y:0,vx:0,vy:0,r,stage:Math.max(0,Math.min(LAST-1,stageOf(r))),inv:1.5,dashT:0,dashCd:0,fx:1,fy:0,a:0,v:(rand()*6)|0,alive:true,peak:r};}
 function freshRun(){return{origin:null,pacts:[],relics:[],syn:[],rerolls:2,laws:[],gone:new Set(),seed:1,daily:null,bossDone:{},boss:null,evT:rr(35,55),shower:null,perks:{},shields:1,phoenixUsed:false,cycle:1,time:0,eaten:0,cometT:rr(12,20),moonA:0,saveT:4};}
-function targetZoom(){const prog=clamp(stageF(P.r)-P.stage,0,1),mo=momentT>0?Math.sin(Math.PI*momentT/1.2):0,rv=revealT>0?Math.sin(Math.PI*(1-revealT/REV_T)):0;return Math.min(W,H)*(.052+.03*prog)/(1+.18*lv('lens'))*(hasLaw('dim')?1.12:1)*(cnd('bright')?.9:1)/P.r/(1+.15*mo+.9*rv);}
+// the size of the world on screen. Phones and iPads use the short side. On the Duo the closed screen shows the same patch of sky a 6.9" iPhone did,
+// and the open screen keeps that iPhone's body size and shows about a third more around you
+function viewS(){return duoPose==='closed'?Math.sqrt(W*H)*.678:duoPose==='open'?440:Math.min(W,H);}
+function targetZoom(){const prog=clamp(stageF(P.r)-P.stage,0,1),mo=momentT>0?Math.sin(Math.PI*momentT/1.2):0,rv=revealT>0?Math.sin(Math.PI*(1-revealT/REV_T)):0;return viewS()*(.052+.03*prog)/(1+.18*lv('lens'))*(hasLaw('dim')?1.12:1)*(cnd('bright')?.9:1)/P.r/(1+.15*mo+.9*rv);}
 function resetWorld(){objs=[];parts=[];crumbs=[];anoms=[];floaters=[];dRings=[];pops=[];struct.clear();camX=P.x;camY=P.y;zoom=targetZoom();cosmosTick();fillField(true);}
 
 function rollSize(z){const R=P.r,st=P.stage,pT=Math.min(.3,(.075+.005*st+.035*(run.cycle-1)+(hasLaw('hostile')?.06:0))*(z&&z.t==='ring'?.5:z&&z.t==='void'?.6:1)),u=rand();
@@ -1318,7 +1360,7 @@ function render(t){
  if(touch.on&&state==='play'){g.strokeStyle='rgba(255,255,255,.14)';g.lineWidth=2;g.beginPath();g.arc(touch.ox,touch.oy,JOY,0,TAU);g.stroke();const dx=touch.x-touch.ox,dy=touch.y-touch.oy,l=Math.hypot(dx,dy),k=l>JOY?JOY/l:1;g.fillStyle='rgba(255,255,255,.18)';g.beginPath();g.arc(touch.ox+dx*k,touch.oy+dy*k,16,0,TAU);g.fill();}
  if(banner&&state!=='title'&&state!=='photo'){const fs0=Math.round(Math.min(W*.13,64)),bt=banner.t,a=bt<.3?bt/.3:bt>2.2?Math.max(0,1-(bt-2.2)/.6):1;if(a<=0)banner=null;else{const fs=Math.round(Math.min(W*.13,64)),y=Math.round(Math.max(H*.3,hudBottom()+fs0+20)),ln=Math.min(W*.5,260)*clamp(bt/.7,0,1);g.globalAlpha=a;g.textAlign='center';g.textBaseline='alphabetic';g.font='600 '+fs+'px Cormorant, Georgia, serif';g.fillStyle='#f2eee3';g.fillText(banner.txt,Math.round(W/2),y);
   g.fillStyle='rgba(243,181,98,.85)';g.fillRect(W/2-ln/2,y+fs*.28,ln,1.25);g.font='500 '+Math.min(W*.04,16)+'px -apple-system,system-ui,sans-serif';g.fillStyle='rgba(222,226,245,.95)';g.fillText(banner.sub,Math.round(W/2),Math.round(y+fs*.28+26));g.globalAlpha=1;}}
- if(state==='title'){const cx=W/2,cy=H*.33,M=Math.min(W,H);[.2,.3,.41,.53].forEach((q,i)=>{const R=M*q;atlasRing(cx,cy,R,.16,i===1||i===3?72:36,simT*.02*(i%2?1:-1),i===2);const a=simT*(.25/(i+1))+i*1.7;g.fillStyle='rgba('+GOLD+',.55)';g.beginPath();g.arc(cx+Math.cos(a)*R,cy+Math.sin(a)*R,i===3?3.4:2.4,0,TAU);g.fill();});g.fillStyle=radial(g,cx,cy,0,cx,cy,M*.08,[[0,'rgba(243,181,98,.22)'],[1,'rgba(243,181,98,0)']]);g.fillRect(cx-M*.08,cy-M*.08,M*.16,M*.16);}
+ if(state==='title'){const tw=ov.classList.contains('two'),cx=tw?W*.25:W/2,cy=tw?H*.4:H*.33,M=Math.min(W,H)*(tw?.8:1);[.2,.3,.41,.53].forEach((q,i)=>{const R=M*q;atlasRing(cx,cy,R,.16,i===1||i===3?72:36,simT*.02*(i%2?1:-1),i===2);const a=simT*(.25/(i+1))+i*1.7;g.fillStyle='rgba('+GOLD+',.55)';g.beginPath();g.arc(cx+Math.cos(a)*R,cy+Math.sin(a)*R,i===3?3.4:2.4,0,TAU);g.fill();});g.fillStyle=radial(g,cx,cy,0,cx,cy,M*.08,[[0,'rgba(243,181,98,.22)'],[1,'rgba(243,181,98,0)']]);g.fillRect(cx-M*.08,cy-M*.08,M*.16,M*.16);}
  if(state==='map'){const m=drawMapCached(mapFrame(mapLevel),'m'+mapLevel+'|'+run.time.toFixed(2),t);mapYou(m,t);}if(state==='warp'&&warp)drawWarp(t);
  if(flash>0){g.fillStyle='rgba(255,250,240,'+flash+')';g.fillRect(0,0,W,H);}}
 // Worlds near a star cast crisp shadows away from it; inside one, the light dims (an eclipse).
@@ -1366,7 +1408,7 @@ function mapSystem(st,X,Y,sc,t){const sx=X(st.x),sy=Y(st.y);g.lineWidth=1;
 function mapGalaxy(gl,X,Y,sc){const rs=gl.r*sc;if(rs>3&&rs<260){g.globalAlpha=.75;DOTCAP=2.2;g.save();g.translate(X(gl.x),Y(gl.y));g.rotate(gl.a);KINDS.galaxy.draw(g,rs,mulberry(hashStr('galaxy')+gl.v*7919),gl.v);g.restore();DOTCAP=1e9;g.globalCompositeOperation='source-over';g.globalAlpha=1;}}
 function mapLabel(x,y,txt,col){g.font='italic 600 14px Cormorant, Georgia, serif';g.textAlign='left';g.fillStyle='rgba('+(col||GOLD)+',.9)';g.fillText(txt,Math.round(x+8),Math.round(y-6));}
 const safeTop=()=>{const e=$('safeprobe');return e?e.getBoundingClientRect().height||0:0;};
-function drawMap(fr,t,hideYou){const ty=Math.max(64,safeTop()+74),Rp=Math.min(W*.42,H*.4,(H-ty-230)/2.3),cx=W/2,cy=Math.max(H*.46,ty+34+Rp*1.1),sc=Rp/fr.R,X=x=>cx+(x-fr.cx)*sc,Y=y=>cy+(y-fr.cy)*sc;
+function drawMap(fr,t,hideYou){const ty=Math.max(64,safeTop()+74),side=duoPose&&W>H,Rp=side?Math.min((W-250)*.46,(H-ty-24)/2.25):Math.min(W*.42,H*.4,(H-ty-230)/2.3),cx=side?(W-230)/2:W/2,cy=side?Math.max(H*.5+12,ty+28+Rp*1.05):Math.max(H*.46,ty+34+Rp*1.1),sc=Rp/fr.R,X=x=>cx+(x-fr.cx)*sc,Y=y=>cy+(y-fr.cy)*sc;
  g.fillStyle='rgba(4,5,12,.96)';g.fillRect(0,0,W,H);g.lineWidth=1;
  for(let i=1;i<=4;i++){g.strokeStyle='rgba('+GOLD+','+(i===4?.28:.1)+')';g.beginPath();g.arc(cx,cy,Rp*i/4,0,TAU);g.stroke();}
  g.strokeStyle='rgba('+GOLD+',.07)';g.beginPath();for(let k=0;k<24;k++){const a=k*TAU/24;g.moveTo(cx+Math.cos(a)*Rp*.25,cy+Math.sin(a)*Rp*.25);g.lineTo(cx+Math.cos(a)*Rp*1.1,cy+Math.sin(a)*Rp*1.1);}g.stroke();atlasRing(cx,cy,Rp*1.1,.25,72,0,false);
@@ -1501,7 +1543,14 @@ function hud(){if(frame%6)return;if(frame%30===0){const L=locText();if($('loc').
  const bp=railPos(stg,stg)+clamp(stageF(P.r)-stg,0,1)*.42;$('railbead').style.left=(bp*100)+'%';$('railfill').style.width=(bp*100)+'%';
  const sig=JSON.stringify(run.perks)+run.shields+run.phoenixUsed+run.pacts.join()+run.relics.join()+run.syn.join();if(sig!==perkSig){perkSig=sig;let h='';for(const k in run.perks){if(k==='crust'||k==='stardust')continue;if(k==='phoenix'&&run.phoenixUsed)continue;h+='<span class="pk">'+svgI(k)+(run.perks[k]>1?run.perks[k]:'')+'</span>';}for(const k of run.relics)h+='<span class="pk rl">'+svgI(RELICS[k].ic)+'</span>';for(const k of run.pacts)h+='<span class="pk pc">'+svgI(PACTS[k].ic)+'</span>';if(run.shields)h+='<span class="pk sh">'+svgI('crust')+run.shields+'</span>';$('perks').innerHTML=h;}}
 let toastT=0;function toast(msg,role){const e=$('toast');e.classList.toggle('good',role==='good');e.classList.toggle('bad',role==='bad');e.textContent=String(msg).replace(/[\p{Extended_Pictographic}\u{FE0F}\u{200D}]/gu,'').trim();e.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>e.classList.remove('show'),1800);}
-function showOv(html,light,cls){ov.innerHTML=html;document.body.classList.toggle('ovup',!cls);ov.className='ov'+(light?' light':'')+(cls?' '+cls:'');}
+function showOv(html,light,cls){ov.innerHTML=html;document.body.classList.toggle('ovup',!cls);ov.className='ov'+(light?' light':'')+(cls?' '+cls:'');reflowOv();}
+// Duo held wide: menus become two pages, words on the left and buttons on the right, so the gutter falls on the hinge
+const LEFTPG='h1,h2,.tag,.kick,.psub,.plate,.rec,.runlog,.stats,.nb,.snd';
+function reflowOv(){const two=document.documentElement.classList.contains('duo')&&W>H&&!/\b(tray|mapov|photov)\b/.test(ov.className)&&!ov.querySelector('.album,.shop,.cards');
+ const pgs=ov.querySelectorAll(':scope>.pg');if(!two&&!pgs.length)return;const kids=pgs.length?[...pgs[0].children,...pgs[1].children]:[...ov.children];
+ if(!two){pgs.forEach(p=>p.remove());kids.forEach(n=>ov.appendChild(n));ov.classList.remove('two');return;}
+ if(pgs.length)return;const a=document.createElement('div'),b=document.createElement('div');a.className=b.className='pg';
+ kids.forEach(n=>(n.matches(LEFTPG)?a:b).appendChild(n));if(!a.children.length||!b.children.length){kids.forEach(n=>ov.appendChild(n));return;}ov.append(a,b);ov.classList.add('two');}
 function hideOv(){document.body.classList.remove('ovup');ov.className='ov hidden';ov.innerHTML='';}
 const on=(id,fn)=>{const e=$(id);if(e)e.addEventListener('click',ev=>{ev.stopPropagation();audio();fn();});};
 function sndLabel(){return'';}
@@ -1620,8 +1669,8 @@ window.__acc=()=>({dust:rec.dust,boss:run&&run.boss?run.boss.boss.d.name+' r'+(r
 // ---------- main loop
 let last=performance.now(),benchMs=0,tScale=1;
 function loop(now){let dt=(now-last)/1000;last=now;if(!(dt>0))dt=0;if(dt>.05)dt=.05;frame++;simT+=dt;
- momentT=Math.max(0,momentT-dt);revealT=Math.max(0,revealT-dt);
- tScale+=((state==='pick'?.12:momentT>0&&state==='play'?.3:1)-tScale)*Math.min(1,dt*(state==='pick'?7:momentT>0?9:2.4));
+ momentT=Math.max(0,momentT-dt);revealT=Math.max(0,revealT-dt);poseT=Math.max(0,poseT-dt);
+ tScale+=((state==='pick'?.12:(momentT>0||poseT>0)&&state==='play'?.3:1)-tScale)*Math.min(1,dt*(state==='pick'?7:momentT>0||poseT>0?9:2.4));
  if(state==='pick'){const sd=dt*tScale;P.inv=Math.max(P.inv,1);run.time+=sd;updatePlayer(sd,false);stepShocks(sd);stepWorld(sd,true);stepCrumbs(sd,true);camera(sd);stepParts(sd);cosT+=sd;structPos();}
  if(state==='play'||state==='title'||state==='dead'||state==='bang'){const dt0=dt;dt=state==='play'?dt*tScale:dt;cosT+=dt;cosTk-=dt;if(cosTk<=0){cosTk=.2;cosmosTick();}structPos();}
  if(Q.has('eattest')&&state==='play'&&frame%80===0){const k=+Q.get('eattest')||.5,o=makeObj(P.x+P.r*(1.05+k),P.y,P.r*k);o.vx=-P.r*2;o.vy=0;objs.push(o);}
