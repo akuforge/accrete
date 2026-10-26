@@ -25,7 +25,7 @@ svg.i{fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke
 button{font:inherit;color:inherit}
 button:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
 /* ---- HUD: an instrument, not a dashboard */
-#hud{position:fixed;left:0;right:0;top:0;pointer-events:none;padding:calc(env(safe-area-inset-top) + 40px) calc(env(safe-area-inset-right) + 18px) 0 calc(env(safe-area-inset-left) + 18px)}
+#hud{position:fixed;left:0;right:0;top:0;pointer-events:none;padding:calc(var(--sat) + 40px) calc(env(safe-area-inset-right) + 18px) 0 calc(env(safe-area-inset-left) + 18px)}
 #hud{text-shadow:none;-webkit-font-smoothing:antialiased}
 .hrow{display:flex;align-items:flex-start;gap:16px}
 .inst{flex:1;max-width:380px;min-width:0}
@@ -71,7 +71,7 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
 #toast.good:before{background:var(--ice)}#toast.bad:before{background:var(--red)}
 #toast.show{opacity:1}
 /* ---- overlays */
-.ov{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;background:radial-gradient(ellipse at 50% 42%,rgba(5,6,14,.5),rgba(5,6,14,.92));-webkit-backdrop-filter:blur(5px);backdrop-filter:blur(5px);text-align:center;padding:calc(env(safe-area-inset-top) + 20px) 22px calc(env(safe-area-inset-bottom) + 20px);box-sizing:border-box;overflow-y:auto}
+.ov{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;background:radial-gradient(ellipse at 50% 42%,rgba(5,6,14,.5),rgba(5,6,14,.92));-webkit-backdrop-filter:blur(5px);backdrop-filter:blur(5px);text-align:center;padding:calc(var(--sat) + 20px) 22px calc(env(safe-area-inset-bottom) + 20px);box-sizing:border-box;overflow-y:auto}
 .ov.light{background:radial-gradient(ellipse at 50% 45%,rgba(5,6,14,.1),rgba(5,6,14,.72));-webkit-backdrop-filter:none;backdrop-filter:none}
 h1{font:500 clamp(58px,18vw,108px)/.88 var(--serif);letter-spacing:.015em;margin:0;text-shadow:none}
 .tag{margin:12px 0 36px;font:italic 500 20px var(--serif);color:var(--dust)}
@@ -165,7 +165,7 @@ h2{font:600 clamp(40px,12vw,60px)/1 var(--serif);margin:6px 0 20px}
 @media (orientation:landscape) and (max-height:520px){.cards{flex-direction:row;width:min(880px,96vw)}.card{flex:1;flex-direction:column;text-align:center}.pips{justify-content:center}.tag{margin-bottom:14px}h1{font-size:64px}}
 /* iPad (AkuPad, both orientations): pause to the far edge, wider instrument column, type and touch targets ~1.3x. Phones in landscape stay under 740px tall. */
 @media (min-width:740px) and (min-height:740px){
-#hud{padding:calc(env(safe-area-inset-top) + 30px) calc(env(safe-area-inset-right) + 34px) 0 calc(env(safe-area-inset-left) + 34px)}
+#hud{padding:calc(var(--sat) + 30px) calc(env(safe-area-inset-right) + 34px) 0 calc(env(safe-area-inset-left) + 34px)}
 .hbtns{margin-left:auto}.ibtn{width:54px;height:54px}.ibtn svg.i{width:24px;height:24px}
 .inst,#perks,#bossbar{max-width:540px}
 #sname{font-size:38px}#cyc{font-size:21px}.mrow{font-size:16px}#snext{font-size:20px}.goal{font-size:20px;margin-top:10px}#gprog{font-size:15px}#loc{font-size:19px}
@@ -182,11 +182,14 @@ h2{font:600 clamp(40px,12vw,60px)/1 var(--serif);margin:6px 0 20px}
 .row b{font-size:21px}.row b small{font-size:14px}.row>span>small{font-size:15px}.shead{font-size:21px}.rar{font-size:18px}
 .runlog div{font-size:15px}.runlog b{font-size:20px}
 }
+/* top inset as a variable so the Duo can zero it in landscape */
+:root{--sat:env(safe-area-inset-top)}
 /* iPhone Duo (Adam's phone since 2026-10-23). JS sets html.duo + duo-closed|duo-open + duo-land|duo-port (+ duo-side when the status bar is not along the top, duo-book when Safari reports the hinge as folded).
    Closed: the outer screen is wider and shorter than an iPhone's and the system keeps its controls on the trailing edge, so the HUD starts near the top and its buttons stack down the side (in every pose, so they never move).
    Open: same type sizes (Apple: keep text consistent across poses), a wider instrument column, and two-page menus in landscape whose gutter sits on the hinge. */
 html.duo .hbtns{flex-direction:column;margin-left:auto}
-html.duo-side #hud{padding-top:calc(env(safe-area-inset-top) + 14px)}
+html.duo-land{--sat:0px}/* the status bar is on the side; iOS can report a stale top inset on return from the app switcher */
+html.duo-side #hud{padding-top:calc(var(--sat) + 14px)}
 html.duo-open #hud{padding-left:calc(env(safe-area-inset-left) + 26px);padding-right:calc(env(safe-area-inset-right) + 26px)}
 html.duo-open .inst,html.duo-open #perks,html.duo-open #bossbar{max-width:440px}
 html.duo-open .tile{max-width:136px;min-height:124px}
@@ -234,7 +237,7 @@ html.duo-book.duo-land .ptiles>:nth-child(n+2){order:3}
 const $=id=>document.getElementById(id);
 const cv=$('c'),ov=$('ov');let g=cv.getContext('2d');
 const Q=new URLSearchParams(location.search);
-const BUILD='2026-10-24.41';
+const BUILD='2026-10-25.1';
 let W=0,H=0,DPR=1;
 function resize(){DPR=Math.min(window.devicePixelRatio||1,3);let w=window.innerWidth,h=window.innerHeight;
  // iOS home-screen apps can report a viewport shorter than the screen (a black strip at the bottom): take the largest honest height
@@ -249,7 +252,7 @@ function detectDuo(){const f=Q.get('duo');if(f==='closed'||f==='open')return f;i
 function insets(){const e=document.getElementById('insprobe');if(!e||typeof getComputedStyle!=='function')return[0,0,0,0];const c=getComputedStyle(e);return[c.paddingTop,c.paddingRight,c.paddingBottom,c.paddingLeft].map(v=>parseFloat(v)||0);}
 function duoCheck(){const was=duoPose;duoPose=detectDuo();const cl=document.documentElement.classList,ins=insets();
  let book=false;try{book=(navigator.devicePosture&&navigator.devicePosture.type==='folded')||matchMedia('(horizontal-viewport-segments: 2)').matches;}catch(_){}
- cl.toggle('duo',!!duoPose);cl.toggle('duo-closed',duoPose==='closed');cl.toggle('duo-open',duoPose==='open');cl.toggle('duo-land',!!duoPose&&W>H);cl.toggle('duo-port',!!duoPose&&W<=H);cl.toggle('duo-side',!!duoPose&&ins[0]<20);cl.toggle('duo-book',!!duoPose&&book);
+ cl.toggle('duo',!!duoPose);cl.toggle('duo-closed',duoPose==='closed');cl.toggle('duo-open',duoPose==='open');cl.toggle('duo-land',!!duoPose&&W>H);cl.toggle('duo-port',!!duoPose&&W<=H);cl.toggle('duo-side',!!duoPose&&(ins[0]<20||W>H));cl.toggle('duo-book',!!duoPose&&book);
  // folding or unfolding mid-run: a moment of slow motion and safety while the view re-frames
  try{if(was&&duoPose&&was!==duoPose&&P&&state==='play'){poseT=1.6;P.inv=Math.max(P.inv,2.2);}if(!ov.classList.contains('hidden'))reflowOv();}catch(_){}// before the game state exists
  clearTimeout(diagTm);diagTm=setTimeout(duoDiag,1500);}
@@ -1407,7 +1410,7 @@ function mapSystem(st,X,Y,sc,t){const sx=X(st.x),sy=Y(st.y);g.lineWidth=1;
  st.planets.forEach((p,i)=>{const q=planetPos(st,p),x=X(q.x),y=Y(q.y),r=Math.max(2.2,p.r*sc),gn=run.gone.has(p.id),col=p.gas?hex(GAS[p.v%GAS.length][0]):PLAN[p.v%PLAN.length].atm;g.fillStyle=rgba(col,gn?0:.95);g.strokeStyle=rgba(col,.9);g.beginPath();g.arc(x,y,r,0,TAU);gn?g.stroke():g.fill();if(p.ring&&!gn){g.strokeStyle=rgba(col,.6);g.beginPath();g.arc(x,y,r*1.8,0,TAU);g.stroke();}});}
 function mapGalaxy(gl,X,Y,sc){const rs=gl.r*sc;if(rs>3&&rs<260){g.globalAlpha=.75;DOTCAP=2.2;g.save();g.translate(X(gl.x),Y(gl.y));g.rotate(gl.a);KINDS.galaxy.draw(g,rs,mulberry(hashStr('galaxy')+gl.v*7919),gl.v);g.restore();DOTCAP=1e9;g.globalCompositeOperation='source-over';g.globalAlpha=1;}}
 function mapLabel(x,y,txt,col){g.font='italic 600 14px Cormorant, Georgia, serif';g.textAlign='left';g.fillStyle='rgba('+(col||GOLD)+',.9)';g.fillText(txt,Math.round(x+8),Math.round(y-6));}
-const safeTop=()=>{const e=$('safeprobe');return e?e.getBoundingClientRect().height||0:0;};
+const safeTop=()=>{if(duoPose&&W>H)return 0;const e=$('safeprobe');return e?e.getBoundingClientRect().height||0:0;};
 function drawMap(fr,t,hideYou){const ty=Math.max(64,safeTop()+74),side=duoPose&&W>H,Rp=side?Math.min((W-250)*.46,(H-ty-24)/2.25):Math.min(W*.42,H*.4,(H-ty-230)/2.3),cx=side?(W-230)/2:W/2,cy=side?Math.max(H*.5+12,ty+28+Rp*1.05):Math.max(H*.46,ty+34+Rp*1.1),sc=Rp/fr.R,X=x=>cx+(x-fr.cx)*sc,Y=y=>cy+(y-fr.cy)*sc;
  g.fillStyle='rgba(4,5,12,.96)';g.fillRect(0,0,W,H);g.lineWidth=1;
  for(let i=1;i<=4;i++){g.strokeStyle='rgba('+GOLD+','+(i===4?.28:.1)+')';g.beginPath();g.arc(cx,cy,Rp*i/4,0,TAU);g.stroke();}
@@ -1661,7 +1664,10 @@ function showOver(){overShown=true;$('hud').classList.add('hidden');
  on('bAgain',()=>startRun(null,!!run.daily));on('bMenu',showTitle);if(Q.has('demo'))setTimeout(()=>startRun(null),1500);}
 function saveRun(){if(!P||!P.alive||!(state==='play'||state==='pick'||state==='paused'))return;try{localStorage.setItem(SV,JSON.stringify({r:P.r,stage:P.stage,pend:pendingPicks+(state==='pick'?1:0),px:P.x,py:P.y,cosT,run:{seed:run.seed,daily:run.daily,gone:[...run.gone],laws:run.laws,ignited:run.ignited,goal:run.goal,bonusDust:run.bonusDust,trail:run.trail||[],wonders:run.wonders||[],jumps:run.jumps||[],seen:[...(run.seen||[])],seenPos:run.seenPos||{},origin:run.origin,pacts:run.pacts,relics:run.relics,syn:run.syn,rerolls:run.rerolls,maxStage:Math.max(P.stage,run.maxStage||0),bossWins:run.bossWins||0,bossPlan:run.bossPlan,bossDone:run.bossDone,perks:run.perks,shields:run.shields,phoenixUsed:run.phoenixUsed,cycle:run.cycle,time:run.time,eaten:run.eaten,gasF:run.gasF||0,gasM:run.gasM||0,bank:run.bank||0,drift:run.drift||0,golds:run.golds||0}}));}catch(e){}}
 $('bPause').addEventListener('click',e=>{e.stopPropagation();pause();});$('bMap').addEventListener('click',e=>{e.stopPropagation();audio();openMap();});
-document.addEventListener('visibilitychange',()=>{if(document.hidden){saveRun();pause();try{if(AC)AC.suspend();if(silentEl)silentEl.pause();}catch(e){}}});
+document.addEventListener('visibilitychange',()=>{if(document.hidden){saveRun();pause();try{if(AC)AC.suspend();if(silentEl)silentEl.pause();}catch(e){}}else onResume();});
+window.addEventListener('pageshow',e=>{if(e.persisted)onResume();});
+// back from the app switcher: iOS settles the safe areas late, so re-read the screen a few times
+function onResume(){try{window.scrollTo(0,0);}catch(_){}resize();setTimeout(resize,350);setTimeout(resize,1200);}
 addEventListener('pagehide',saveRun);
 
 window.__dbg=()=>({run,P,objs,state,ap:autopilot,zoom,zone:zoneP,home:HOME,crumbs});
