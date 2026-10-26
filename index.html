@@ -237,7 +237,7 @@ html.duo-book.duo-land .ptiles>:nth-child(n+2){order:3}
 const $=id=>document.getElementById(id);
 const cv=$('c'),ov=$('ov');let g=cv.getContext('2d');
 const Q=new URLSearchParams(location.search);
-const BUILD='2026-10-25.1';
+const BUILD='2026-10-25.2';
 let W=0,H=0,DPR=1;
 function resize(){DPR=Math.min(window.devicePixelRatio||1,3);let w=window.innerWidth,h=window.innerHeight;
  // iOS home-screen apps can report a viewport shorter than the screen (a black strip at the bottom): take the largest honest height
@@ -1667,7 +1667,11 @@ $('bPause').addEventListener('click',e=>{e.stopPropagation();pause();});$('bMap'
 document.addEventListener('visibilitychange',()=>{if(document.hidden){saveRun();pause();try{if(AC)AC.suspend();if(silentEl)silentEl.pause();}catch(e){}}else onResume();});
 window.addEventListener('pageshow',e=>{if(e.persisted)onResume();});
 // back from the app switcher: iOS settles the safe areas late, so re-read the screen a few times
-function onResume(){try{window.scrollTo(0,0);}catch(_){}resize();setTimeout(resize,350);setTimeout(resize,1200);}
+// report (first 6 returns per build, tailnet only): innerWidth,innerHeight,insets t/r/b/l,scrollY,visualViewport offsetTop/height on return and 1.5 s later
+function resumeDiag(){try{if(!/\.ts\.net$/.test(location.hostname)||!/iPhone/.test(navigator.userAgent))return;const k='accrete.diagr.'+BUILD,n=+(localStorage.getItem(k)||0);if(n>=6)return;localStorage.setItem(k,n+1);
+ const snap=()=>{const i=insets(),v=window.visualViewport;return[innerWidth,innerHeight,i.join('/'),Math.round(scrollY),v?Math.round(v.offsetTop)+'/'+Math.round(v.height):''].join(',');},a=snap();
+ setTimeout(()=>{fetch('/__diag?'+new URLSearchParams({accdiag:1,ev:'resume',b:BUILD,pose:duoPose||'none',a,z:snap()}),{cache:'no-store'}).catch(()=>{});},1500);}catch(_){}}
+function onResume(){resumeDiag();try{window.scrollTo(0,0);}catch(_){}resize();setTimeout(resize,350);setTimeout(resize,1200);}
 addEventListener('pagehide',saveRun);
 
 window.__dbg=()=>({run,P,objs,state,ap:autopilot,zoom,zone:zoneP,home:HOME,crumbs});
