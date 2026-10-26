@@ -25,7 +25,7 @@ svg.i{fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke
 button{font:inherit;color:inherit}
 button:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
 /* ---- HUD: an instrument, not a dashboard */
-#hud{position:fixed;left:0;right:0;top:0;pointer-events:none;padding:calc(var(--sat) + 40px) calc(env(safe-area-inset-right) + 18px) 0 calc(env(safe-area-inset-left) + 18px)}
+#hud{position:fixed;left:0;right:0;top:0;box-sizing:border-box;width:var(--fw,100%);pointer-events:none;padding:calc(var(--sat) + 40px) calc(env(safe-area-inset-right) + 18px) 0 calc(env(safe-area-inset-left) + 18px)}
 #hud{text-shadow:none;-webkit-font-smoothing:antialiased}
 .hrow{display:flex;align-items:flex-start;gap:16px}
 .inst{flex:1;max-width:380px;min-width:0}
@@ -71,7 +71,7 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
 #toast.good:before{background:var(--ice)}#toast.bad:before{background:var(--red)}
 #toast.show{opacity:1}
 /* ---- overlays */
-.ov{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;background:radial-gradient(ellipse at 50% 42%,rgba(5,6,14,.5),rgba(5,6,14,.92));-webkit-backdrop-filter:blur(5px);backdrop-filter:blur(5px);text-align:center;padding:calc(var(--sat) + 20px) 22px calc(env(safe-area-inset-bottom) + 20px);box-sizing:border-box;overflow-y:auto}
+.ov{position:fixed;inset:0;width:var(--fw,100%);display:flex;align-items:center;justify-content:center;flex-direction:column;background:radial-gradient(ellipse at 50% 42%,rgba(5,6,14,.5),rgba(5,6,14,.92));-webkit-backdrop-filter:blur(5px);backdrop-filter:blur(5px);text-align:center;padding:calc(var(--sat) + 20px) 22px calc(env(safe-area-inset-bottom) + 20px);box-sizing:border-box;overflow-y:auto}
 .ov.light{background:radial-gradient(ellipse at 50% 45%,rgba(5,6,14,.1),rgba(5,6,14,.72));-webkit-backdrop-filter:none;backdrop-filter:none}
 h1{font:500 clamp(58px,18vw,108px)/.88 var(--serif);letter-spacing:.015em;margin:0;text-shadow:none}
 .tag{margin:12px 0 36px;font:italic 500 20px var(--serif);color:var(--dust)}
@@ -213,7 +213,7 @@ html.duo-book.duo-land .ptiles>:nth-child(n+2){order:3}
 <body>
 <div id="safeprobe" style="position:fixed;top:0;left:0;width:1px;height:env(safe-area-inset-top);visibility:hidden;pointer-events:none"></div>
 <div id="insprobe" style="position:fixed;left:0;top:0;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);visibility:hidden;pointer-events:none"></div>
-<div id="vprobe" style="position:fixed;left:0;top:0;width:1px;height:100vh;height:100lvh;visibility:hidden;pointer-events:none"></div>
+<div id="vprobe" style="position:fixed;left:0;top:0;width:100vw;width:100lvw;height:100vh;height:100lvh;visibility:hidden;pointer-events:none"></div>
 <canvas id="c"></canvas>
 <div id="hud" class="hidden">
   <div class="hrow">
@@ -237,14 +237,16 @@ html.duo-book.duo-land .ptiles>:nth-child(n+2){order:3}
 const $=id=>document.getElementById(id);
 const cv=$('c'),ov=$('ov');let g=cv.getContext('2d');
 const Q=new URLSearchParams(location.search);
-const BUILD='2026-10-25.2';
+const BUILD='2026-10-25.3';
 let W=0,H=0,DPR=1;
 function resize(){DPR=Math.min(window.devicePixelRatio||1,3);let w=window.innerWidth,h=window.innerHeight;
  // iOS home-screen apps can report a viewport shorter than the screen (a black strip at the bottom): take the largest honest height
- const pr=document.getElementById('vprobe');if(pr)h=Math.max(h,pr.getBoundingClientRect().height);h=Math.max(h,document.documentElement.clientHeight||0,window.visualViewport?window.visualViewport.height:0);
+ const pr=document.getElementById('vprobe'),pb=pr?pr.getBoundingClientRect():null;if(pb)h=Math.max(h,pb.height);h=Math.max(h,document.documentElement.clientHeight||0,window.visualViewport?window.visualViewport.height:0);
  const sa=navigator.standalone||(window.matchMedia&&matchMedia('(display-mode: standalone)').matches);
  if(sa&&window.screen&&screen.width){const port=h>=w,sw=port?Math.min(screen.width,screen.height):Math.max(screen.width,screen.height),sh=port?Math.max(screen.width,screen.height):Math.min(screen.width,screen.height);if(Math.abs(sw-w)<4&&sh>h)h=sh;}
- W=w;H=h;cv.width=Math.round(W*DPR);cv.height=Math.round(H*DPR);cv.style.width=W+'px';cv.style.height=H+'px';duoCheck();}
+ // the iPhone Duo in landscape keeps the side status bar out of innerWidth (an empty strip down one side), but the large viewport covers it
+ if(sa&&pb&&pb.width>w&&pb.width<w*1.25)w=pb.width;
+ W=w;H=h;document.documentElement.style.setProperty('--fw',W+'px');cv.width=Math.round(W*DPR);cv.height=Math.round(H*DPR);cv.style.width=W+'px';cv.style.height=H+'px';duoCheck();}
 // iPhone Duo: outer screen 466x678 pt, inner 626x890 pt, both @3x (Apple tech specs, 2026-10). ?duo=closed|open forces a pose for testing
 const DUO_D={closed:[466,678],open:[626,890]};let duoPose='',poseT=0,diagTm=0;
 function detectDuo(){const f=Q.get('duo');if(f==='closed'||f==='open')return f;if(!/iPhone/.test(navigator.userAgent)||Math.abs((window.devicePixelRatio||1)-3)>.1||!window.screen)return'';
@@ -259,7 +261,7 @@ function duoCheck(){const was=duoPose;duoPose=detectDuo();const cl=document.docu
 try{if(navigator.devicePosture)navigator.devicePosture.addEventListener('change',duoCheck);}catch(_){}
 // one report per pose to the hub's access log, so the real Duo's numbers can be checked: docker logs aku-hub | grep accdiag. Tailnet copy only, never the public site
 function duoDiag(){try{if(!/\.ts\.net$/.test(location.hostname)||!/iPhone/.test(navigator.userAgent))return;const k='accrete.diag.'+BUILD+'.'+(duoPose||'none')+'.'+(W>H?'l':'p');if(localStorage.getItem(k))return;localStorage.setItem(k,'1');
- const i=insets(),p=new URLSearchParams({accdiag:1,b:BUILD,pose:duoPose||'none',sw:screen.width,sh:screen.height,iw:innerWidth,ih:innerHeight,W:Math.round(W),H:Math.round(H),dpr:devicePixelRatio,ins:i.join(','),sa:navigator.standalone?1:0,post:navigator.devicePosture?navigator.devicePosture.type:'-',seg:matchMedia('(horizontal-viewport-segments: 2)').matches?'h2':matchMedia('(vertical-viewport-segments: 2)').matches?'v2':'1',ua:navigator.userAgent.slice(0,180)});
+ const i=insets(),p=new URLSearchParams({accdiag:1,b:BUILD,pose:duoPose||'none',sw:screen.width,sh:screen.height,iw:innerWidth,ih:innerHeight,W:Math.round(W),H:Math.round(H),dpr:devicePixelRatio,ins:i.join(','),sa:navigator.standalone?1:0,lv:(()=>{const b=document.getElementById('vprobe').getBoundingClientRect();return Math.round(b.width)+'x'+Math.round(b.height);})(),ow:outerWidth+'x'+outerHeight,vv:window.visualViewport?Math.round(visualViewport.width)+'x'+Math.round(visualViewport.height):'',post:navigator.devicePosture?navigator.devicePosture.type:'-',seg:matchMedia('(horizontal-viewport-segments: 2)').matches?'h2':matchMedia('(vertical-viewport-segments: 2)').matches?'v2':'1',ua:navigator.userAgent.slice(0,180)});
  fetch('/__diag?'+p,{cache:'no-store'}).catch(()=>{});}catch(_){}}
 if(document.fonts&&document.fonts.load){document.fonts.load('600 40px Cormorant');document.fonts.load('italic 600 20px Cormorant');}
 window.addEventListener('resize',resize);window.addEventListener('orientationchange',()=>setTimeout(resize,300));if(window.visualViewport)visualViewport.addEventListener('resize',resize);resize();setTimeout(resize,300);setTimeout(resize,1200);
